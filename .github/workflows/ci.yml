@@ -1,0 +1,118 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+env:
+  DBMATE_VERSION: v2.36.0
+  DBMATE_MIGRATIONS_TABLE: dbmate.schema_migrations
+  DBMATE_NO_DUMP_SCHEMA: "true"
+
+jobs:
+  database:
+    name: Migrations and pgTAP
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: change-me-superuser
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dbmate
+        run: |
+          curl -fsSL -o dbmate "https://github.com/amacneil/dbmate/releases/download/${DBMATE_VERSION}/dbmate-linux-amd64"
+          chmod +x dbmate && sudo mv dbmate /usr/local/bin/dbmate
+      - name: Create the roles and database (as the bootstrap script does)
+        env:
+          PGPASSWORD: change-me-superuser
+        run: |
+          psql -h localhost -U postgres -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE rc_owner LOGIN CREATEROLE PASSWORD 'change-me-owner';
+          CREATE ROLE rc_app LOGIN NOINHERIT PASSWORD 'change-me-app';
+          CREATE DATABASE recircuit OWNER rc_owner;
+          SQL
+      - name: Apply migrations
+        run: dbmate --url "postgres://rc_owner:change-me-owner@localhost:5432/recircuit?sslmode=disable" -d db/migrations up
+      - name: Every down migration works, then apply again
+        run: |
+          URL="postgres://rc_owner:change-me-owner@localhost:5432/recircuit?sslmode=disable"
+          for i in $(seq 1 13); do dbmate --url "$URL" -d db/migrations rollback; done
+          dbmate --url "$URL" -d db/migrations up
+      - name: pgTAP safety suite
+        run: |
+          cp .env.example .env
+          echo "DB_HOST_PORT=5433" >> .env
+          make db-test
+
+  api:
+    name: API (ruff, mypy, pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dbmate (the API tests build a database from the migrations)
+        run: |
+          curl -fsSL -o dbmate "https://github.com/amacneil/dbmate/releases/download/${DBMATE_VERSION}/dbmate-linux-amd64"
+          chmod +x dbmate && sudo mv dbmate /usr/local/bin/dbmate
+      - name: Install Python dependencies
+        run: |
+          python - <<'PY' > requirements-ci.txt
+          import tomllib
+          p = tomllib.load(open("api/pyproject.toml", "rb"))["project"]
+          for dep in [*p["dependencies"], *p["optional-dependencies"]["seed"], *p["optional-dependencies"]["dev"]]:
+              print(dep)
+          PY
+          pip install -r requirements-ci.txt
+      - run: cd api && ruff check . ../seed ../loadtest
+      - run: mypy --strict --config-file api/pyproject.toml seed
+      - run: cd api && mypy --strict --config-file pyproject.toml app tests
+      - run: cd api && pytest -q
+
+  web:
+    name: Web (build, lint)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: cd web && npm ci && npm run build && npm run lint
+
+  e2e:
+    name: Browser flows F1-F5 (main only)
+    if: github.ref == 'refs/heads/main'
+    needs: [database, api, web]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dbmate
+        run: |
+          curl -fsSL -o dbmate "https://github.com/amacneil/dbmate/releases/download/${DBMATE_VERSION}/dbmate-linux-amd64"
+          chmod +x dbmate && sudo mv dbmate /usr/local/bin/dbmate
+      - name: Install seed dependencies
+        run: pip install "psycopg[binary,pool]==3.3.6" "faker==40.40.0" "bcrypt==4.0.1"
+      - name: Run the flows
+        run: |
+          cp .env.example .env
+          make e2e PYTHON=python
+      - name: Keep the Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/test-results

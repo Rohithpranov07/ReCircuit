@@ -27,7 +27,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T4.5 Auditor (S6) and remaining screens
 - [x] T5.1 End-to-end flows F1–F5
 - [x] T5.2 Load and concurrency evidence
-- [ ] T6.1 CI pipeline
+- [x] T6.1 CI pipeline
 - [ ] T6.2 README and one-command setup
 - [ ] T6.3 Traceability matrix
 - [ ] T6.4 Backup and restore drill
