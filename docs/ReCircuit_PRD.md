@@ -207,7 +207,7 @@ As a technician, I want to reinstall a harvested part into another device, so th
 
 As a technician, I want to list harvested batteries with health ≥ 80, so that I can pick parts for refurbishment.
 
-- Acceptance: Only units whose latest event is HARVESTED and latest score ≥ threshold are listed (FR-7.3).
+- Acceptance: Only loose units are listed: latest event HARVESTED, or latest event DIAGNOSED and not currently installed after having been installed, with latest score ≥ threshold (FR-7.3).
 - Acceptance: Results return in under 1 second on the large seed profile.
 
 #### US-6 · P0
@@ -361,7 +361,7 @@ Requirements are grouped by component and individually ID'd. Priority uses P0/P1
 | --- | --- | --- | --- |
 | FR-7.1 | Attach test results only to DIAGNOSED events | P0 | Other event types refused (rule C7) |
 | FR-7.2 | Test has type, PASS/DEGRADED/FAIL result, value and 0–100 score | P0 | Out-of-range score fails CHECK |
-| FR-7.3 | Reuse inventory filtered by category and minimum health | P0 | Only latest-HARVESTED units with latest score ≥ threshold |
+| FR-7.3 | Reuse inventory filtered by category and minimum health | P0 | Only loose units (latest event HARVESTED, or DIAGNOSED while not installed and previously installed) with latest score ≥ threshold |
 | FR-7.4 | Health trend chart per part | P2 | Score over time on the passport page |
 
 ### 9.8 Chain of Custody (FR-8)
@@ -454,7 +454,7 @@ flowchart TB
     API --> EM[Error mapping<br/>DB rule to 409 / 422]
   end
   subgraph DB[Database layer: PostgreSQL 16]
-    CORE[Relational core<br/>17 tables in BCNF<br/>DB roles + RLS]
+    CORE[Relational core<br/>18 tables in BCNF<br/>DB roles + RLS]
     INT[Integrity layer<br/>rules C1-C10: triggers,<br/>exclusion, hash chain]
     QL[Query layer<br/>stored procedures<br/>views Q1-Q8, indexes]
   end
@@ -502,6 +502,7 @@ stateDiagram-v2
   DIAGNOSED --> HARVESTED
   DIAGNOSED --> RECYCLED
   DIAGNOSED --> DISPOSED
+  DIAGNOSED --> REINSTALLED
   REFURBISHED --> SOLD: resold
   HARVESTED --> REINSTALLED
   REINSTALLED --> COLLECTED: back in service
@@ -519,7 +520,7 @@ stateDiagram-v2
 | MANUFACTURED | SOLD, COLLECTED |
 | SOLD | COLLECTED |
 | COLLECTED | DIAGNOSED, HARVESTED, RECYCLED, DISPOSED |
-| DIAGNOSED | DIAGNOSED, REFURBISHED, HARVESTED, RECYCLED, DISPOSED |
+| DIAGNOSED | DIAGNOSED, REFURBISHED, HARVESTED, REINSTALLED, RECYCLED, DISPOSED |
 | HARVESTED | DIAGNOSED, REINSTALLED, RECYCLED, DISPOSED |
 | REFURBISHED | SOLD, DIAGNOSED |
 | REINSTALLED | SOLD, COLLECTED, DIAGNOSED |
@@ -542,13 +543,13 @@ stateDiagram-v2
 
 ### 12.1 Core data collections
 
-Seventeen relations, all in BCNF. Relations 1–14 are unchanged from the Assessment 6 design; 15–17 and three columns are added by this PRD.
+Eighteen relations, all in BCNF: seventeen domain relations and `event_transition`, the rule-reference table behind C5 (all-key, trivially BCNF). Relations 1–14 are unchanged from the Assessment 6 design; 15–17 and three columns are added by this PRD.
 
 | # | Relation | Purpose | Primary key |
 | --- | --- | --- | --- |
 | 1 | organization | Producers, collectors, dismantlers, refurbishers, recyclers | org_id |
 | 2 | facility | Sites owned by an organisation | facility_id |
-| 3 | actor | Staff accounts (+ password_hash, is_active) | actor_id |
+| 3 | actor | Staff accounts with roles PRODUCER, COLLECTOR, TECHNICIAN, RECYCLER_OPERATOR, AUDITOR, ADMIN (+ password_hash, is_active) | actor_id |
 | 4 | part_model | Catalogue designs with JSONB spec | model_id |
 | 5 | material | Tracked materials | material_id |
 | 6 | model_material | Material mass per model | (model_id, material_id) |
@@ -563,6 +564,7 @@ Seventeen relations, all in BCNF. Relations 1–14 are unchanged from the Assess
 | 15 | transfer_discrepancy (new) | Missing / extra units at receipt | (transfer_id, unit_id) |
 | 16 | epr_target (new) | Producer target kg per category per FY | (producer_id, category, financial_year) |
 | 17 | audit_log (new) | Insert-only sensitive-action log | log_id |
+| 18 | event_transition (reference data) | Legal (from, to) event pairs read by C5; 24 rows | (from_type, to_type) |
 
 Integrity rules enforced by the database:
 
@@ -571,8 +573,8 @@ Integrity rules enforced by the database:
 | C1 | One parent at a time | EXCLUDE USING gist on assembly_link |
 | C2 | No assembly cycles | trg_asm_no_cycle (recursive ancestor walk) |
 | C3 | Events append-only | trg_event_immutable + REVOKE UPDATE, DELETE |
-| C4 | Hash chain | trg_event_chain using pgcrypto digest() |
-| C5 | Legal transitions only | trg_event_transition + event_transition table |
+| C4 | Hash chain | trg_event_20_chain using pgcrypto digest() |
+| C5 | Legal transitions only | trg_event_10_transition + event_transition table |
 | C6 | Harvest closes link | trg_event_harvest |
 | C7 | Tests only on DIAGNOSED | trg_test_event_type |
 | C8 | One open manifest per unit | trg_transfer_one_open |
@@ -649,7 +651,7 @@ Views: v_unit_current, v_unit_passport, v_public_passport, v_reuse_inventory, v_
 | KPI-2 | Chain verification | Units whose hash chain verifies on clean seed data; tampered row detected | 100%; detected |
 | KPI-3 | Passport latency | p95 of GET /units/{passport_uid} on the large seed | < 200 ms |
 | KPI-4 | Part-tree correctness | Scripted BOM-at-date scenarios matching expected output | 10 / 10 |
-| KPI-5 | Normal form | Base relations in BCNF | 17 / 17 |
+| KPI-5 | Normal form | Base relations in BCNF | 18 / 18 |
 | KPI-6 | Requirement coverage | P0 requirements with a passing linked test | 100% |
 | KPI-7 | Demo completeness | End-to-end flows run live without manual SQL | 5 / 5 |
 
@@ -691,7 +693,7 @@ gantt
 
 | Phase | Dates | Deliverables | Exit criterion |
 | --- | --- | --- | --- |
-| 1 Schema, migrations, seed | Oct 5–11 | DDL for 17 tables, extensions, small seed | Empty DB builds and seed loads with zero errors |
+| 1 Schema, migrations, seed | Oct 5–11 | DDL for 18 tables, extensions, small seed | Empty DB builds and seed loads with zero errors |
 | 2 Triggers, procedures, pgTAP | Oct 12–18 | Rules C1–C10, event_transition table, 5 procedures | All 13 negative tests pass |
 | 3 Views, Q1–Q8, indexes | Oct 19–25 | Views, materialized view, indexes, large seed | Q1–Q8 match fixtures; NFR-6 met in EXPLAIN ANALYZE |
 | 4 API, auth, RLS | Oct 26–Nov 1 | FastAPI endpoints, JWT, DB roles, RLS | Integration suite and role tests green |

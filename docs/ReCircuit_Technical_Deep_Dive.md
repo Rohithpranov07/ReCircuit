@@ -121,14 +121,20 @@ Every authenticated request runs this sequence inside **one** database transacti
 
 ```python
 # api/db.py — the only way the API touches PostgreSQL
-async def run(user: Claims, fn: str, *args):
+async def run(claims, routine, isolation=None, followup=None, **params):
+    spec = ROUTINES[routine]            # fixed allow-list: name -> (PROCEDURE | FUNCTION, parameter names and types)
     async with pool.connection() as conn, conn.transaction():
-        await conn.execute(f"SET LOCAL ROLE {ROLE_MAP[user.role]}")          # e.g. rc_technician
-        await conn.execute("SELECT set_config('rc.actor_id', %s, true)", [str(user.actor_id)])
-        await conn.execute("SELECT set_config('rc.org_id',   %s, true)", [str(user.org_id)])
-        await conn.execute("SELECT set_config('rc.role',     %s, true)", [user.role])
-        return await conn.execute(f"SELECT * FROM {fn}({placeholders(args)})", args)
+        if isolation == "serializable":
+            await conn.execute("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE")
+        await conn.execute(sql.SQL("SET LOCAL ROLE {}").format(sql.Identifier(ROLE_MAP[claims.role])))   # rc_technician, ...
+        await conn.execute("SELECT set_config('rc.actor_id', %s, true), set_config('rc.org_id', %s, true), "
+                           "set_config('rc.role', %s, true)", [str(claims.actor_id), str(claims.org_id), claims.role])
+        # procedures are CALLed, functions SELECTed (PostgreSQL refuses SELECT on a procedure); values are bound
+        stmt = "CALL r(p => %s::t, ...)" if spec.kind == "PROCEDURE" else "SELECT * FROM r(p => %s::t, ...)"
+        return await conn.execute(stmt, values)
 ```
+
+> **Erratum E1 (applied).** The original text called every routine with `SELECT * FROM fn(...)`; PostgreSQL answers *"sp_harvest(...) is a procedure — To call a procedure, use CALL."* The allow-list therefore records each routine's kind. Routines are called with named notation so that omitted arguments take the routine's defaults.
 
 - The API logs in as `rc_app`, a `NOINHERIT` login role that is a member of every `rc_*` role but has no privileges of its own. `SET LOCAL ROLE` scopes privileges to the transaction (FR-1.4).
 - `rc.actor_id`, `rc.org_id` and `rc.role` are transaction-local settings read by RLS policies and procedures (FR-1.5).
@@ -201,7 +207,7 @@ CREATE TABLE actor (
 
 -- helper used by RLS and procedures
 CREATE FUNCTION fn_org_of_facility(f INT) RETURNS INT
-  LANGUAGE sql STABLE AS $$ SELECT org_id FROM facility WHERE facility_id = f $$;
+  LANGUAGE sql STABLE AS $$ SELECT org_id FROM public.facility WHERE facility_id = f $$;   -- qualified (E8)
 CREATE FUNCTION fn_ctx_org()  RETURNS INT  LANGUAGE sql STABLE AS $$ SELECT current_setting('rc.org_id')::INT $$;
 CREATE FUNCTION fn_ctx_role() RETURNS TEXT LANGUAGE sql STABLE AS $$ SELECT current_setting('rc.role') $$;
 ```
@@ -217,11 +223,17 @@ CREATE ROLE rc_recycler;  CREATE ROLE rc_auditor;   CREATE ROLE rc_admin;
 CREATE ROLE public_reader;
 GRANT rc_producer, rc_collector, rc_technician, rc_recycler, rc_auditor, rc_admin, public_reader TO rc_app;
 
--- all writes go through SECURITY DEFINER procedures owned by rc_owner (the migration role);
--- roles get EXECUTE on the procedures they may call and SELECT on what they may read.
+-- rc_owner (LOGIN, CREATEROLE) runs the migrations and owns every object; it is created by the bootstrap script (E4).
+-- All writes go through SECURITY DEFINER procedures owned by rc_owner; roles get EXECUTE on the procedures
+-- they may call and SELECT on what they may read (migration 013).
 REVOKE ALL ON ALL TABLES IN SCHEMA public FROM PUBLIC;
-GRANT SELECT ON ALL TABLES IN SCHEMA public TO rc_auditor, rc_admin;
-REVOKE UPDATE, DELETE ON lifecycle_event, audit_log FROM rc_owner, rc_admin;  -- C3: nobody edits history
+GRANT SELECT ON <base tables> TO rc_producer, rc_collector, rc_technician, rc_recycler, rc_auditor, rc_admin;
+GRANT SELECT (actor_id, facility_id, full_name, role, email, is_active) ON actor TO <the same roles>;  -- never password_hash
+GRANT SELECT ON audit_log TO rc_auditor, rc_admin;
+-- C3, second line of defence (the trigger is the real guard: an owner can re-grant itself)
+REVOKE UPDATE, DELETE, TRUNCATE ON audit_log FROM <every role, including rc_owner>;
+REVOKE UPDATE, DELETE, TRUNCATE ON lifecycle_event FROM <every role except rc_owner>;
+REVOKE DELETE, TRUNCATE ON lifecycle_event FROM rc_owner;
 ```
 
 | Procedure | Producer | Collector | Technician | Recycler | Auditor | Admin |
@@ -237,11 +249,35 @@ REVOKE UPDATE, DELETE ON lifecycle_event, audit_log FROM rc_owner, rc_admin;  --
 | `sp_verify_chain` | | | | | ✓ | ✓ |
 | `sp_admin_*` (orgs, facilities, actors) | | | | | | ✓ |
 
+> **Errata E4 and E6 (applied).** The original `REVOKE … FROM rc_owner` named a role nobody created: the bootstrap now creates `rc_owner`. Revoking `UPDATE` on `lifecycle_event` from the owner is not possible: foreign-key checks (`diagnostic_test.event_id`, `corrects_event_id`) lock the referenced row with `FOR KEY SHARE`, which PostgreSQL only allows with `UPDATE` privilege. The owner keeps `UPDATE` there and `trg_event_immutable` refuses it (`RC003`). Roles are cluster-wide, so migration 013 creates them only if missing. The staff roles may also `EXECUTE` `sp_verify_chain` (the staff passport shows `chain_verified`) and `fn_part_tree`, `mv_material_recovery` is readable by `rc_auditor` and `rc_admin` only (it has no row-level security), and `rc_technician` alone may `sp_harvest`, `sp_reinstall` and `sp_record_tests`.
+
+#### Routine contracts (erratum E5)
+
+The routines below were named but not defined in the original text. Their signatures are fixed here (bodies: migration 010). All are `SECURITY DEFINER SET search_path = public`, owned by `rc_owner`; the acting organisation and actor come from `rc.org_id` / `rc.actor_id`, never from parameters (except the `sp_admin_*` routines).
+
+| Routine | Kind | Signature | Contract |
+| --- | --- | --- | --- |
+| `sp_register_model` | function → `INT` | `(p_model_number, p_category, p_mass_g, p_spec DEFAULT '{}')` | Manufacturer = `rc.org_id`; spec keys checked with `fn_spec_keys` (`RC012`) |
+| `sp_set_materials` | procedure | `(p_model INT, p_materials JSONB)` | Replaces the composition `[{material_id, mass_mg}]`; model must be the caller's (`42501`) |
+| `sp_set_target` | procedure | `(p_category, p_fy, p_target_kg)` | Upsert into `epr_target` for the caller's organisation |
+| `sp_create_unit` | function → `BIGINT` | `(p_model, p_serial, p_manufactured_on DEFAULT NULL, p_parent DEFAULT NULL)` | With `p_parent`, also opens a period at `now()` (no event) |
+| `sp_bulk_create_units` | function → `BIGINT[]` | `(p_units JSONB)` | All-or-nothing |
+| `sp_record_tests` | procedure | `(p_unit, p_at, p_facility, p_tests JSONB)` | Calls `sp_record_event(…,'DIAGNOSED',…)`, then inserts `[{test_type, result, measured_value, health_score}]` |
+| `sp_create_transfer` | function → `BIGINT` | `(p_manifest_no, p_to_org, p_shipped_at, p_total_mass_kg, p_items JSONB)` | Sender = `rc.org_id`; at least one item |
+| `sp_issue_certificate` | function → `BIGINT` | `(p_cert_no, p_category, p_quantity_kg, p_fy, p_issued_on, p_units JSONB)` | Recycler = `rc.org_id`; certificate, then units, then one `audit_log` row; the caller sets SERIALIZABLE |
+| `sp_allocate_certificate` | procedure | `(p_cert, p_producer)` | Issuer only, once (`RC015`); target must be a producer (`RC016`); writes `audit_log` |
+| `sp_admin_create_org` / `_facility` / `_actor` | functions | see migration 010 | Administration; the bcrypt hash is computed in the API; audit rows when an acting user exists |
+| `sp_admin_set_actor_active` | procedure | `(p_actor, p_active)` | Writes `audit_log` |
+| `sp_refresh_material_recovery` | procedure | `()` | `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_material_recovery`; `rc_admin` only |
+| `fn_auth_lookup` | function → table | `(p_email)` | Login lookup before a user exists; `rc_auth` only |
+| `fn_spec_keys` | function → `TEXT[]` | `(p_category)` | SQL copy of the §4 key list |
+
 Row-level security (one example; the same pattern applies to `epr_certificate`, `transfer_discrepancy` and `epr_target`):
 
 ```sql
 ALTER TABLE custody_transfer ENABLE ROW LEVEL SECURITY;
 CREATE POLICY ct_scope ON custody_transfer FOR SELECT
+  TO rc_producer, rc_collector, rc_technician, rc_recycler, rc_auditor, rc_admin   -- not public_reader
   USING (fn_ctx_role() IN ('AUDITOR','ADMIN')
          OR from_org_id = fn_ctx_org() OR to_org_id = fn_ctx_org());
 ```
@@ -359,7 +395,7 @@ CREATE TABLE unit (
   UNIQUE (model_id, serial_no)
 );
 
-CREATE VIEW v_unit_current AS
+CREATE VIEW v_unit_current WITH (security_invoker = true) AS
 WITH last_event AS (
   SELECT e.unit_id, e.event_type, e.occurred_at, e.facility_id,
          ROW_NUMBER() OVER (PARTITION BY e.unit_id ORDER BY e.event_id DESC) AS rn
@@ -378,7 +414,7 @@ FROM unit u
 LEFT JOIN last_event   le ON le.unit_id = u.unit_id AND le.rn = 1
 LEFT JOIN last_receipt lr ON lr.unit_id = u.unit_id AND lr.rn = 1;
 
-CREATE VIEW v_unit_passport AS
+CREATE VIEW v_unit_passport WITH (security_invoker = true) AS
 SELECT u.unit_id, u.passport_uid, u.serial_no, u.manufactured_on,
        m.model_id, m.model_number, m.category, m.mass_g, m.spec,
        o.org_name AS manufacturer,
@@ -515,7 +551,7 @@ Dismantle and reinstall procedures:
 -- FR-5.8: create sub-units under an existing device, atomically.
 -- p_parts = [{"model_id":12,"serial_no":"BAT-0091"}, ...]
 CREATE PROCEDURE sp_dismantle(p_device BIGINT, p_parts JSONB, p_at TIMESTAMPTZ, p_facility INT)
-LANGUAGE plpgsql SECURITY DEFINER AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE part JSONB; new_id BIGINT; child_state VARCHAR(20);
 BEGIN
   FOR part IN SELECT * FROM jsonb_array_elements(p_parts) LOOP
@@ -545,7 +581,7 @@ END $$;
 
 -- FR-5.1 + EVT REINSTALLED: open a new period, then log the event
 CREATE PROCEDURE sp_reinstall(p_unit BIGINT, p_new_parent BIGINT, p_at TIMESTAMPTZ, p_facility INT)
-LANGUAGE plpgsql SECURITY DEFINER AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   INSERT INTO assembly_link (child_unit_id, installed_at, parent_unit_id)
   VALUES (p_unit, p_at, p_new_parent);                 -- C1 / C2 may refuse here
@@ -701,7 +737,7 @@ CREATE TRIGGER trg_audit_immutable BEFORE UPDATE OR DELETE ON audit_log
 -- the one entry point for events
 CREATE PROCEDURE sp_record_event(p_unit BIGINT, p_type VARCHAR, p_at TIMESTAMPTZ, p_facility INT,
                                  p_corrects BIGINT DEFAULT NULL)
-LANGUAGE plpgsql SECURITY DEFINER AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF fn_org_of_facility(p_facility) <> fn_ctx_org() THEN
     RAISE EXCEPTION 'facility % is not in your organisation', p_facility USING ERRCODE = 'RC013';
@@ -713,11 +749,11 @@ BEGIN
 END $$;
 
 CREATE PROCEDURE sp_harvest(p_unit BIGINT, p_at TIMESTAMPTZ, p_facility INT)
-LANGUAGE sql SECURITY DEFINER AS $$ CALL sp_record_event(p_unit, 'HARVESTED', p_at, p_facility) $$;
+LANGUAGE sql SECURITY DEFINER SET search_path = public AS $$ CALL sp_record_event(p_unit, 'HARVESTED', p_at, p_facility) $$;
 
 -- Q8: returns NULL if the chain is intact, else the first event_id whose stored hash is wrong
 CREATE FUNCTION sp_verify_chain(p_unit BIGINT) RETURNS BIGINT
-LANGUAGE plpgsql STABLE AS $$
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE r RECORD; expected_prev BYTEA := NULL;
 BEGIN
   FOR r IN SELECT * FROM lifecycle_event WHERE unit_id = p_unit ORDER BY event_id LOOP
@@ -787,7 +823,7 @@ END $$;
 CREATE TRIGGER trg_test_event_type BEFORE INSERT ON diagnostic_test
   FOR EACH ROW EXECUTE FUNCTION fn_test_event_type();
 
-CREATE VIEW v_reuse_inventory AS
+CREATE VIEW v_reuse_inventory WITH (security_invoker = true) AS
 WITH latest_score AS (
   SELECT e.unit_id, t.health_score, t.test_type, e.occurred_at,
          ROW_NUMBER() OVER (PARTITION BY e.unit_id ORDER BY e.event_id DESC, t.test_id DESC) AS rn
@@ -801,8 +837,14 @@ FROM v_unit_current c
 JOIN unit u        ON u.unit_id = c.unit_id
 JOIN part_model m  ON m.model_id = u.model_id
 LEFT JOIN latest_score s ON s.unit_id = c.unit_id AND s.rn = 1
-WHERE c.current_state = 'HARVESTED';
+WHERE c.current_state = 'HARVESTED'
+   OR (c.current_state = 'DIAGNOSED'
+       AND NOT EXISTS (SELECT 1 FROM assembly_link a
+                       WHERE a.child_unit_id = c.unit_id AND a.removed_at IS NULL)
+       AND EXISTS (SELECT 1 FROM assembly_link a WHERE a.child_unit_id = c.unit_id));  -- was once installed
 ```
+
+> **Erratum E2 (applied).** Ordinary views run with their owner's rights and bypass row-level security: a role that saw 0 manifests through the table saw 2 through a plain view. Every view that staff roles read is therefore created `WITH (security_invoker = true)`, and the roles hold `SELECT` on the base tables. Consequence: a staff view is computed from what the caller may see, so `v_unit_current.current_holder_org_id` is derived from the manifests visible to that caller.
 
 Recommended score conventions (documented, not enforced):
 
@@ -889,7 +931,7 @@ CREATE TRIGGER trg_transfer_one_open BEFORE INSERT ON transfer_item
 
 CREATE PROCEDURE sp_receive_transfer(p_transfer BIGINT, p_at TIMESTAMPTZ,
                                      p_missing BIGINT[] DEFAULT '{}', p_extra BIGINT[] DEFAULT '{}')
-LANGUAGE plpgsql SECURITY DEFINER AS $$
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   UPDATE custody_transfer SET received_at = p_at
    WHERE transfer_id = p_transfer AND to_org_id = fn_ctx_org() AND received_at IS NULL;
@@ -1010,7 +1052,7 @@ CREATE CONSTRAINT TRIGGER trg_cert_quantity_head
   AFTER INSERT OR UPDATE ON epr_certificate
   DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION fn_cert_quantity();
 
-CREATE VIEW v_certificate_backing AS
+CREATE VIEW v_certificate_backing WITH (security_invoker = true) AS
 SELECT c.cert_id, c.cert_no, c.recycler_id, c.producer_id, c.category, c.financial_year,
        c.quantity_kg AS claimed_kg,
        ROUND(COALESCE(SUM(cu.recovered_mass_g),0) / 1000, 3) AS backed_kg,
@@ -1018,7 +1060,7 @@ SELECT c.cert_id, c.cert_no, c.recycler_id, c.producer_id, c.category, c.financi
 FROM epr_certificate c LEFT JOIN certificate_unit cu USING (cert_id)
 GROUP BY c.cert_id;
 
-CREATE VIEW v_epr_compliance AS
+CREATE VIEW v_epr_compliance WITH (security_invoker = true) AS
 SELECT t.producer_id, t.category, t.financial_year, t.target_kg,
        COALESCE(SUM(c.quantity_kg),0) AS acquired_kg,
        ROUND(100 * COALESCE(SUM(c.quantity_kg),0) / t.target_kg, 1) AS pct_of_target
@@ -1131,17 +1173,21 @@ Anyone holding a part should be able to verify it without an account, without se
 
 ```sql
 -- latest scored test for a unit, in any state (the reuse view only covers loose parts)
-CREATE FUNCTION fn_latest_health(p_unit BIGINT) RETURNS SMALLINT LANGUAGE sql STABLE AS $$
+-- SECURITY DEFINER (E3): a function called by a view runs with the caller's table rights
+CREATE FUNCTION fn_latest_health(p_unit BIGINT) RETURNS SMALLINT
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT t.health_score FROM lifecycle_event e JOIN diagnostic_test t ON t.event_id = e.event_id
   WHERE e.unit_id = p_unit AND t.health_score IS NOT NULL
   ORDER BY e.event_id DESC, t.test_id DESC LIMIT 1
 $$;
 
+-- owner-rights view (deliberately not security_invoker); it reads the latest event itself (E7)
 CREATE VIEW v_public_passport AS
 SELECT u.passport_uid,
        m.model_number, m.category, o.org_name AS manufacturer,
        u.manufactured_on,
-       c.current_state,
+       (SELECT e.event_type FROM lifecycle_event e
+         WHERE e.unit_id = u.unit_id ORDER BY e.event_id DESC LIMIT 1)    AS current_state,
        (SELECT jsonb_agg(jsonb_build_object('type', e.event_type,
                                             'date', e.occurred_at::date) ORDER BY e.event_id)
           FROM lifecycle_event e WHERE e.unit_id = u.unit_id)              AS history,
@@ -1149,12 +1195,14 @@ SELECT u.passport_uid,
        (sp_verify_chain(u.unit_id) IS NULL)                               AS chain_verified
 FROM unit u
 JOIN part_model m   ON m.model_id = u.model_id
-JOIN organization o ON o.org_id = m.manufacturer_id
-JOIN v_unit_current c ON c.unit_id = u.unit_id;
+JOIN organization o ON o.org_id = m.manufacturer_id;
 -- view owner rc_owner; SECURITY BARRIER so filters cannot leak rows
 ALTER VIEW v_public_passport SET (security_barrier = true);
 GRANT SELECT ON v_public_passport TO public_reader;
+GRANT EXECUTE ON FUNCTION fn_latest_health(BIGINT), sp_verify_chain(BIGINT) TO public_reader;
 ```
+
+> **Errata E3 and E7 (applied).** `public_reader` got *"permission denied for table lifecycle_event"* because functions inside a view run as the caller: `sp_verify_chain` and `fn_latest_health` are `SECURITY DEFINER SET search_path = public`. PostgreSQL also checks `EXECUTE` on the functions a view calls against the caller, hence the two grants. A `security_invoker` view nested inside an owner-rights view is checked against the calling role too, so `v_public_passport` can no longer join `v_unit_current` (E2) and reads the latest event itself; the columns and values are unchanged.
 
 ```ts
 interface PublicPassport {
@@ -1273,7 +1321,7 @@ Corrected rows:
 ```sql
 INSERT INTO event_transition VALUES ('DIAGNOSED','REINSTALLED');
 
--- v_reuse_inventory WHERE clause becomes:
+-- v_reuse_inventory WHERE clause becomes (applied in §8 and in migration 011):
 WHERE c.current_state = 'HARVESTED'
    OR (c.current_state = 'DIAGNOSED'
        AND NOT EXISTS (SELECT 1 FROM assembly_link a
@@ -1319,9 +1367,12 @@ Without the fix, step 9 would return nothing and step 11 would fail with `422 IL
 | `RC012` | `SPEC_KEY_UNKNOWN` | 400 | `sp_register_model` | — |
 | `RC013` | `FACILITY_NOT_YOURS` | 403 | `sp_record_event` | — |
 | `RC014` | `TRANSFER_NOT_OPEN` | 409 | `sp_receive_transfer` | — |
+| `RC015` | `CERT_ALREADY_ALLOCATED` | 409 | `sp_allocate_certificate` | EPR-5 |
+| `RC016` | `NOT_A_PRODUCER` | 422 | `sp_allocate_certificate` | EPR-5 |
 | `42501` | `FORBIDDEN` | 403 | Privileges | FR-1.4 |
 | `40001` | (retried, then `CONFLICT_RETRY`) | 409 | SERIALIZABLE | NFR-4 |
 | other `23505` | `DUPLICATE` | 409 | UNIQUE constraints | — |
+| `23514` (CHECK), `23503` (foreign key), class `22` | `INVALID_VALUE` | 400 | CHECK / data exceptions | — |
 
 ### 16.2 Migration order
 
@@ -1329,16 +1380,17 @@ Without the fix, step 9 would return nothing and step 11 would fail with `422 IL
 | --- | --- |
 | `001_extensions.sql` | `pgcrypto`, `btree_gist` |
 | `002_identity.sql` | `organization`, `facility`, `actor`, helper functions |
-| `003_catalogue.sql` | `part_model`, `material`, `model_material`, GIN index |
+| `003_catalogue.sql` | `part_model`, `material`, `model_material`, GIN index, `fn_spec_keys` |
 | `004_unit_assembly.sql` | `unit`, `assembly_link` + C1, C2 |
-| `005_event_ledger.sql` | `lifecycle_event`, `event_transition` (+ seed rows), `fn_event_digest`, C3–C6, `audit_log` |
+| `005_event_ledger.sql` | `lifecycle_event`, `event_transition` (+ rows, including `DIAGNOSED → REINSTALLED`), `audit_log`, `fn_event_digest`, C3–C6, `sp_record_event`, `sp_harvest`, `sp_verify_chain` |
 | `006_diagnostics.sql` | `diagnostic_test`, C7 |
-| `007_custody.sql` | `custody_transfer`, `transfer_item`, `transfer_discrepancy`, C8 |
+| `007_custody.sql` | `custody_transfer`, `transfer_item`, `transfer_discrepancy`, C8, `sp_receive_transfer` |
 | `008_epr.sql` | `epr_certificate`, `certificate_unit`, `epr_target`, C9, C10 |
-| `009_procedures.sql` | All `sp_*` procedures |
-| `010_views.sql` | All `v_*` views, `fn_part_tree`, `mv_material_recovery` |
-| `011_indexes.sql` | Remaining FK and query indexes |
-| `012_roles_rls.sql` | Roles, grants, RLS policies |
+| `009_procedures.sql` | `fn_part_tree`, `sp_dismantle`, `sp_reinstall` |
+| `010_procedures_contract.sql` | The routines defined by contract (erratum E5), `fn_auth_lookup` |
+| `011_views.sql` | All `v_*` views, `mv_material_recovery`, `fn_latest_health` |
+| `012_indexes.sql` | Remaining foreign-key indexes |
+| `013_roles_rls.sql` | Roles, grants, RLS policies |
 
 ### 16.3 Glossary
 
@@ -1356,7 +1408,7 @@ Without the fix, step 9 would return nothing and step 11 would fail with `422 IL
 
 ### 16.4 Verification record
 
-> **Executed, not just written.** The SQL in this document was loaded in migration order into PostgreSQL 16.13 on 05-Oct-2026 and the §14 walkthrough was run against it, including every negative test below. The roles/grants/RLS block (§3) and the API layer were **not** executed in this run; they are verified in Build Phase 4.
+> **Executed, not just written.** The SQL in this document was loaded in migration order into PostgreSQL 16.13 on 05-Oct-2026 and the §14 walkthrough was run against it, including every negative test below. It has since been rebuilt as migrations 001–013 and re-run on PostgreSQL 16.15 under `make db-test` (174 pgTAP tests, including roles and row-level security), with the API, web portal and browser flows built on top. Errata E1–E8 above come from those runs.
 
 | Test | Attempt | Result |
 | --- | --- | --- |
