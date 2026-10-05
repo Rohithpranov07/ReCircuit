@@ -1,0 +1,8 @@
+-- q8_verify_chain
+-- Q8 sp_verify_chain on the unit with the most events (23 events); the function body is opaque to EXPLAIN
+EXPLAIN (ANALYZE, BUFFERS) SELECT sp_verify_chain(22440)
+
+Result  (cost=0.00..0.26 rows=1 width=8) (actual time=3.462..3.463 rows=1 loops=1)
+  Buffers: shared hit=573
+Planning Time: 0.032 ms
+Execution Time: 3.478 ms

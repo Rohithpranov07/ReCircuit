@@ -1,0 +1,105 @@
+-- q4_reuse_inventory
+-- Q4 reuse inventory, category BATTERY, health >= 80 (US-5 target < 1 s)
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM v_reuse_inventory WHERE category = 'BATTERY' AND latest_health >= 80
+
+Nested Loop  (cost=104100.42..811983.44 rows=14 width=70) (actual time=627.490..807.325 rows=245 loops=1)
+  Buffers: shared hit=131284 read=3393 written=486, temp read=6974 written=6982
+  ->  Nested Loop  (cost=104100.27..811971.33 rows=72 width=55) (actual time=626.007..806.114 rows=1495 loops=1)
+        Buffers: shared hit=128294 read=3393 written=486, temp read=6974 written=6982
+        ->  Hash Join  (cost=104099.98..811932.49 rows=72 width=59) (actual time=625.992..804.557 rows=1495 loops=1)
+              Hash Cond: (c.unit_id = s.unit_id)
+              Buffers: shared hit=123809 read=3393 written=486, temp read=6974 written=6982
+              ->  Subquery Scan on c  (cost=14379.76..721203.89 rows=10607 width=28) (actual time=318.001..496.139 rows=3835 loops=1)
+                    Filter: (((c.current_state)::text = 'HARVESTED'::text) OR (((c.current_state)::text = 'DIAGNOSED'::text) AND (NOT (hashed SubPlan 2)) AND (hashed SubPlan 4)))
+                    Rows Removed by Filter: 46211
+                    Buffers: shared hit=112870 read=1154 written=247, temp read=394 written=395
+                    ->  Merge Left Join  (cost=14379.76..90374.06 rows=50046 width=46) (actual time=295.879..469.604 rows=50046 loops=1)
+                          Merge Cond: (u_1.unit_id = lr.unit_id)
+                          Buffers: shared hit=112374 read=1058 written=247, temp read=394 written=395
+                          ->  Merge Left Join  (cost=0.71..59870.33 rows=50046 width=38) (actual time=251.057..384.064 rows=50046 loops=1)
+                                Merge Cond: (u_1.unit_id = le.unit_id)
+                                Buffers: shared hit=111282 read=1058 written=247
+                                ->  Index Scan using unit_pkey on unit u_1  (cost=0.29..2140.30 rows=50046 width=24) (actual time=0.013..6.655 rows=50046 loops=1)
+                                      Buffers: shared hit=13999 read=1 written=1
+                                ->  Materialize  (cost=0.42..57572.48 rows=2595 width=22) (actual time=0.078..117.934 rows=50046 loops=1)
+                                      Buffers: shared hit=97283 read=1057 written=246
+                                      ->  Subquery Scan on le  (cost=0.42..57565.99 rows=2595 width=22) (actual time=0.070..110.473 rows=50046 loops=1)
+                                            Filter: (le.rn = 1)
+                                            Buffers: shared hit=97283 read=1057 written=246
+                                            ->  WindowAgg  (cost=0.42..51078.22 rows=519022 width=46) (actual time=0.068..107.409 rows=50046 loops=1)
+                                                  Run Condition: (row_number() OVER (?) <= 1)
+                                                  Buffers: shared hit=97283 read=1057 written=246
+                                                  ->  Index Scan using lifecycle_event_unit_time on lifecycle_event e  (cost=0.42..41995.33 rows=519022 width=30) (actual time=0.060..73.351 rows=519962 loops=1)
+                                                        Buffers: shared hit=97283 read=1057 written=246
+                          ->  Materialize  (cost=14379.05..17860.42 rows=535 width=12) (actual time=44.816..77.753 rows=50046 loops=1)
+                                Buffers: shared hit=1092, temp read=394 written=395
+                                ->  Subquery Scan on lr  (cost=14379.05..17859.09 rows=535 width=12) (actual time=44.815..71.869 rows=50046 loops=1)
+                                      Filter: (lr.rn = 1)
+                                      Buffers: shared hit=1092, temp read=394 written=395
+                                      ->  WindowAgg  (cost=14379.05..16520.61 rows=107078 width=28) (actual time=44.813..68.932 rows=50046 loops=1)
+                                            Run Condition: (row_number() OVER (?) <= 1)
+                                            Buffers: shared hit=1092, temp read=394 written=395
+                                            ->  Sort  (cost=14379.05..14646.75 rows=107078 width=20) (actual time=44.789..50.871 rows=107078 loops=1)
+                                                  Sort Key: ti.unit_id, ct.received_at DESC
+                                                  Sort Method: external merge  Disk: 3152kB
+                                                  Buffers: shared hit=1092, temp read=394 written=395
+                                                  ->  Hash Join  (cost=1191.70..3235.59 rows=107078 width=20) (actual time=5.735..28.893 rows=107078 loops=1)
+                                                        Hash Cond: (ti.transfer_id = ct.transfer_id)
+                                                        Buffers: shared hit=1089
+                                                        ->  Seq Scan on transfer_item ti  (cost=0.00..1762.78 rows=107078 width=16) (actual time=0.012..10.871 rows=107078 loops=1)
+                                                              Buffers: shared hit=692
+                                                        ->  Hash  (cost=750.20..750.20 rows=35320 width=20) (actual time=5.667..5.668 rows=35320 loops=1)
+                                                              Buckets: 65536  Batches: 1  Memory Usage: 2444kB
+                                                              Buffers: shared hit=397
+                                                              ->  Seq Scan on custody_transfer ct  (cost=0.00..750.20 rows=35320 width=20) (actual time=0.010..3.099 rows=35320 loops=1)
+                                                                    Filter: (received_at IS NOT NULL)
+                                                                    Buffers: shared hit=397
+                    SubPlan 2
+                      ->  Seq Scan on assembly_link a  (cost=0.00..663.57 rows=1065 width=8) (actual time=6.643..8.867 rows=1069 loops=1)
+                            Filter: (removed_at IS NULL)
+                            Rows Removed by Filter: 35688
+                            Buffers: shared hit=200 read=96
+                    SubPlan 4
+                      ->  Seq Scan on assembly_link a_1  (cost=0.00..663.57 rows=36757 width=8) (actual time=4.136..5.871 rows=36757 loops=1)
+                            Buffers: shared hit=296
+              ->  Hash  (cost=89715.99..89715.99 rows=338 width=31) (actual time=307.637..307.639 rows=3173 loops=1)
+                    Buckets: 4096 (originally 1024)  Batches: 1 (originally 1)  Memory Usage: 243kB
+                    Buffers: shared hit=10939 read=2239 written=239, temp read=6580 written=6587
+                    ->  Subquery Scan on s  (cost=77860.93..89715.99 rows=338 width=31) (actual time=253.378..307.322 rows=3173 loops=1)
+                          Filter: ((s.health_score >= 80) AND (s.rn = 1))
+                          Rows Removed by Filter: 42465
+                          Buffers: shared hit=10939 read=2239 written=239, temp read=6580 written=6587
+                          ->  WindowAgg  (cost=77860.93..84973.97 rows=316135 width=55) (actual time=253.295..305.423 rows=45638 loops=1)
+                                Run Condition: (row_number() OVER (?) <= 1)
+                                Buffers: shared hit=10939 read=2239 written=239, temp read=6580 written=6587
+                                ->  Sort  (cost=77860.93..78651.27 rows=316135 width=47) (actual time=253.258..283.116 rows=316135 loops=1)
+                                      Sort Key: e_1.unit_id, e_1.event_id DESC, t.test_id DESC
+                                      Sort Method: external merge  Disk: 18520kB
+                                      Buffers: shared hit=10939 read=2239 written=239, temp read=6580 written=6587
+                                      ->  Hash Join  (cost=25021.00..39255.21 rows=316135 width=47) (actual time=79.681..203.227 rows=316135 loops=1)
+                                            Hash Cond: (t.event_id = e_1.event_id)
+                                            Buffers: shared hit=10939 read=2239 written=239, temp read=4265 written=4265
+                                            ->  Seq Scan on diagnostic_test t  (cost=0.00..6038.35 rows=316135 width=31) (actual time=0.018..38.933 rows=316135 loops=1)
+                                                  Filter: (health_score IS NOT NULL)
+                                                  Buffers: shared hit=638 read=2239 written=239
+                                            ->  Hash  (cost=15491.22..15491.22 rows=519022 width=24) (actual time=79.301..79.301 rows=519962 loops=1)
+                                                  Buckets: 131072  Batches: 8  Memory Usage: 4577kB
+                                                  Buffers: shared hit=10301, temp written=2440
+                                                  ->  Seq Scan on lifecycle_event e_1  (cost=0.00..15491.22 rows=519022 width=24) (actual time=0.016..34.066 rows=519962 loops=1)
+                                                        Buffers: shared hit=10301
+        ->  Index Scan using unit_pkey on unit u  (cost=0.29..0.54 rows=1 width=12) (actual time=0.001..0.001 rows=1 loops=1495)
+              Index Cond: (unit_id = c.unit_id)
+              Buffers: shared hit=4485
+  ->  Index Scan using part_model_pkey on part_model m  (cost=0.15..0.17 rows=1 width=23) (actual time=0.001..0.001 rows=0 loops=1495)
+        Index Cond: (model_id = u.model_id)
+        Filter: ((category)::text = 'BATTERY'::text)
+        Rows Removed by Filter: 1
+        Buffers: shared hit=2990
+Planning:
+  Buffers: shared hit=871 read=10
+Planning Time: 2.403 ms
+JIT:
+  Functions: 97
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.914 ms, Inlining 44.061 ms, Optimization 106.414 ms, Emission 114.366 ms, Total 266.755 ms
+Execution Time: 823.766 ms

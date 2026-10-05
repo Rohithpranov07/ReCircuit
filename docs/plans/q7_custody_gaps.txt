@@ -1,0 +1,52 @@
+-- q7_custody_gaps
+-- Q7 custody gaps (db/queries/q7_custody_gaps.sql)
+EXPLAIN (ANALYZE, BUFFERS) SELECT DISTINCT e.unit_id, fn_org_of_facility(e.facility_id) AS org_id
+FROM lifecycle_event e
+WHERE fn_org_of_facility(e.facility_id) <> COALESCE(
+        (SELECT fn_org_of_facility(f.facility_id) FROM lifecycle_event f
+          WHERE f.unit_id = e.unit_id ORDER BY f.event_id LIMIT 1), -1)   -- not the unit's first org
+  AND NOT EXISTS (
+        SELECT 1 FROM transfer_item ti JOIN custody_transfer ct USING (transfer_id)
+        WHERE ti.unit_id = e.unit_id AND ct.to_org_id = fn_org_of_facility(e.facility_id)
+          AND ct.received_at IS NOT NULL AND ct.received_at <= e.occurred_at)
+
+HashAggregate  (cost=1829263.63..1842758.15 rows=51902 width=12) (actual time=4591.951..4592.211 rows=633 loops=1)
+  Group Key: e.unit_id, fn_org_of_facility(e.facility_id)
+  Batches: 1  Memory Usage: 1585kB
+  Buffers: shared hit=4043050
+  ->  Hash Anti Join  (cost=4841.76..1827111.85 rows=430356 width=12) (actual time=188.412..4591.186 rows=633 loops=1)
+        Hash Cond: ((e.unit_id = ti.unit_id) AND (fn_org_of_facility(e.facility_id) = ct.to_org_id))
+        Join Filter: (ct.received_at <= e.occurred_at)
+        Buffers: shared hit=4043050
+        ->  Seq Scan on lifecycle_event e  (cost=0.00..1679284.36 rows=516427 width=20) (actual time=132.309..2541.329 rows=455925 loops=1)
+              Filter: (fn_org_of_facility(facility_id) <> COALESCE((SubPlan 1), '-1'::integer))
+              Rows Removed by Filter: 64037
+              Buffers: shared hit=3130111
+              SubPlan 1
+                ->  Limit  (cost=0.42..2.95 rows=1 width=12) (actual time=0.002..0.002 rows=1 loops=519962)
+                      Buffers: shared hit=2599810
+                      ->  Index Scan Backward using lifecycle_event_unit_time on lifecycle_event f  (cost=0.42..33.32 rows=13 width=12) (actual time=0.002..0.002 rows=1 loops=519962)
+                            Index Cond: (unit_id = e.unit_id)
+                            Buffers: shared hit=2599810
+        ->  Hash  (cost=3235.59..3235.59 rows=107078 width=20) (actual time=40.186..40.192 rows=107078 loops=1)
+              Buckets: 131072  Batches: 1  Memory Usage: 6880kB
+              Buffers: shared hit=1089
+              ->  Hash Join  (cost=1191.70..3235.59 rows=107078 width=20) (actual time=7.727..28.319 rows=107078 loops=1)
+                    Hash Cond: (ti.transfer_id = ct.transfer_id)
+                    Buffers: shared hit=1089
+                    ->  Seq Scan on transfer_item ti  (cost=0.00..1762.78 rows=107078 width=16) (actual time=0.013..7.872 rows=107078 loops=1)
+                          Buffers: shared hit=692
+                    ->  Hash  (cost=750.20..750.20 rows=35320 width=20) (actual time=7.574..7.577 rows=35320 loops=1)
+                          Buckets: 65536  Batches: 1  Memory Usage: 2444kB
+                          Buffers: shared hit=397
+                          ->  Seq Scan on custody_transfer ct  (cost=0.00..750.20 rows=35320 width=20) (actual time=0.023..4.580 rows=35320 loops=1)
+                                Filter: (received_at IS NOT NULL)
+                                Buffers: shared hit=397
+Planning:
+  Buffers: shared hit=438
+Planning Time: 1.390 ms
+JIT:
+  Functions: 41
+  Options: Inlining true, Optimization true, Expressions true, Deforming true
+  Timing: Generation 1.037 ms, Inlining 38.266 ms, Optimization 46.721 ms, Emission 46.798 ms, Total 132.822 ms
+Execution Time: 4625.034 ms

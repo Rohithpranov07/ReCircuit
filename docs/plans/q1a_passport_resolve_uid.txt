@@ -1,0 +1,11 @@
+-- q1a_passport_resolve_uid
+-- Q1 step 1 of the API access pattern: resolve passport_uid to unit_id
+EXPLAIN (ANALYZE, BUFFERS) SELECT unit_id FROM unit WHERE passport_uid = '5198f11a-bb73-4d4d-a145-69fa11da56e1'
+
+Index Scan using unit_passport_uid_key on unit  (cost=0.29..8.31 rows=1 width=8) (actual time=0.015..0.016 rows=1 loops=1)
+  Index Cond: (passport_uid = '5198f11a-bb73-4d4d-a145-69fa11da56e1'::uuid)
+  Buffers: shared hit=3
+Planning:
+  Buffers: shared hit=107
+Planning Time: 0.244 ms
+Execution Time: 0.048 ms

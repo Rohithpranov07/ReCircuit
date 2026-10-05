@@ -1,0 +1,43 @@
+-- q3_current_state_unit
+-- Q3 current state and holder of one unit
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM v_unit_current WHERE unit_id = 22440
+
+Nested Loop Left Join  (cost=26.41..64.80 rows=1 width=46) (actual time=0.083..0.092 rows=1 loops=1)
+  Buffers: shared hit=23
+  ->  Nested Loop Left Join  (cost=0.71..38.78 rows=1 width=46) (actual time=0.050..0.057 rows=1 loops=1)
+        Buffers: shared hit=11
+        ->  Index Scan using unit_pkey on unit u  (cost=0.29..8.31 rows=1 width=24) (actual time=0.017..0.018 rows=1 loops=1)
+              Index Cond: (unit_id = 22440)
+              Buffers: shared hit=6
+        ->  Subquery Scan on le  (cost=0.42..30.46 rows=1 width=30) (actual time=0.031..0.037 rows=1 loops=1)
+              Filter: (le.rn = 1)
+              Buffers: shared hit=5
+              ->  WindowAgg  (cost=0.42..30.30 rows=13 width=46) (actual time=0.030..0.037 rows=1 loops=1)
+                    Run Condition: (row_number() OVER (?) <= 1)
+                    Buffers: shared hit=5
+                    ->  Index Scan using lifecycle_event_unit_time on lifecycle_event e  (cost=0.42..30.07 rows=13 width=38) (actual time=0.026..0.031 rows=23 loops=1)
+                          Index Cond: (unit_id = 22440)
+                          Buffers: shared hit=5
+  ->  Subquery Scan on lr  (cost=25.70..25.77 rows=1 width=12) (actual time=0.032..0.034 rows=1 loops=1)
+        Filter: (lr.rn = 1)
+        Buffers: shared hit=12
+        ->  WindowAgg  (cost=25.70..25.74 rows=2 width=28) (actual time=0.032..0.033 rows=1 loops=1)
+              Run Condition: (row_number() OVER (?) <= 1)
+              Buffers: shared hit=12
+              ->  Sort  (cost=25.70..25.71 rows=2 width=20) (actual time=0.030..0.030 rows=2 loops=1)
+                    Sort Key: ct.received_at DESC
+                    Sort Method: quicksort  Memory: 25kB
+                    Buffers: shared hit=12
+                    ->  Nested Loop  (cost=0.58..25.69 rows=2 width=20) (actual time=0.017..0.019 rows=2 loops=1)
+                          Buffers: shared hit=9
+                          ->  Index Scan using transfer_item_unit on transfer_item ti  (cost=0.29..9.08 rows=2 width=16) (actual time=0.009..0.009 rows=2 loops=1)
+                                Index Cond: (unit_id = 22440)
+                                Buffers: shared hit=3
+                          ->  Index Scan using custody_transfer_pkey on custody_transfer ct  (cost=0.29..8.31 rows=1 width=20) (actual time=0.004..0.004 rows=1 loops=2)
+                                Index Cond: (transfer_id = ti.transfer_id)
+                                Filter: (received_at IS NOT NULL)
+                                Buffers: shared hit=6
+Planning:
+  Buffers: shared hit=595
+Planning Time: 0.749 ms
+Execution Time: 0.162 ms

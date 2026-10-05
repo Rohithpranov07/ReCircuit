@@ -1,0 +1,78 @@
+-- q1_passport
+-- Q1 passport by passport_uid (NFR-6 target < 200 ms)
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM v_unit_passport WHERE passport_uid = '5198f11a-bb73-4d4d-a145-69fa11da56e1'
+
+Nested Loop  (cost=14389.76..90584.42 rows=1 width=183) (actual time=51.814..214.484 rows=1 loops=1)
+  Join Filter: (u.model_id = m.model_id)
+  Rows Removed by Join Filter: 399
+  Buffers: shared hit=104395, temp read=394 written=395
+  ->  Hash Join  (cost=14388.08..90557.26 rows=1 width=66) (actual time=51.476..214.113 rows=1 loops=1)
+        Hash Cond: (u_1.unit_id = u.unit_id)
+        Buffers: shared hit=104357, temp read=394 written=395
+        ->  Merge Left Join  (cost=14379.76..89917.09 rows=50046 width=46) (actual time=41.123..211.776 rows=50046 loops=1)
+              Merge Cond: (u_1.unit_id = lr.unit_id)
+              Buffers: shared hit=104354, temp read=394 written=395
+              ->  Merge Left Join  (cost=0.71..59413.37 rows=50046 width=30) (actual time=0.037..128.999 rows=50046 loops=1)
+                    Merge Cond: (u_1.unit_id = le.unit_id)
+                    Buffers: shared hit=103262
+                    ->  Index Only Scan using unit_pkey on unit u_1  (cost=0.29..1640.96 rows=50046 width=8) (actual time=0.008..4.340 rows=50046 loops=1)
+                          Heap Fetches: 19444
+                          Buffers: shared hit=4922
+                    ->  Materialize  (cost=0.42..57614.79 rows=2600 width=30) (actual time=0.028..114.042 rows=50046 loops=1)
+                          Buffers: shared hit=98340
+                          ->  Subquery Scan on le  (cost=0.42..57608.29 rows=2600 width=30) (actual time=0.022..107.131 rows=50046 loops=1)
+                                Filter: (le.rn = 1)
+                                Buffers: shared hit=98340
+                                ->  WindowAgg  (cost=0.42..51108.77 rows=519962 width=46) (actual time=0.022..103.617 rows=50046 loops=1)
+                                      Run Condition: (row_number() OVER (?) <= 1)
+                                      Buffers: shared hit=98340
+                                      ->  Index Scan using lifecycle_event_unit_time on lifecycle_event e  (cost=0.42..42009.43 rows=519962 width=38) (actual time=0.018..67.032 rows=519962 loops=1)
+                                            Buffers: shared hit=98340
+              ->  Materialize  (cost=14379.05..17860.42 rows=535 width=12) (actual time=41.083..74.222 rows=50046 loops=1)
+                    Buffers: shared hit=1092, temp read=394 written=395
+                    ->  Subquery Scan on lr  (cost=14379.05..17859.09 rows=535 width=12) (actual time=41.079..68.377 rows=50046 loops=1)
+                          Filter: (lr.rn = 1)
+                          Buffers: shared hit=1092, temp read=394 written=395
+                          ->  WindowAgg  (cost=14379.05..16520.61 rows=107078 width=28) (actual time=41.079..65.170 rows=50046 loops=1)
+                                Run Condition: (row_number() OVER (?) <= 1)
+                                Buffers: shared hit=1092, temp read=394 written=395
+                                ->  Sort  (cost=14379.05..14646.75 rows=107078 width=20) (actual time=41.075..46.671 rows=107078 loops=1)
+                                      Sort Key: ti.unit_id, ct.received_at DESC
+                                      Sort Method: external merge  Disk: 3152kB
+                                      Buffers: shared hit=1092, temp read=394 written=395
+                                      ->  Hash Join  (cost=1191.70..3235.59 rows=107078 width=20) (actual time=6.525..24.124 rows=107078 loops=1)
+                                            Hash Cond: (ti.transfer_id = ct.transfer_id)
+                                            Buffers: shared hit=1089
+                                            ->  Seq Scan on transfer_item ti  (cost=0.00..1762.78 rows=107078 width=16) (actual time=0.004..5.267 rows=107078 loops=1)
+                                                  Buffers: shared hit=692
+                                            ->  Hash  (cost=750.20..750.20 rows=35320 width=20) (actual time=6.342..6.342 rows=35320 loops=1)
+                                                  Buckets: 65536  Batches: 1  Memory Usage: 2444kB
+                                                  Buffers: shared hit=397
+                                                  ->  Seq Scan on custody_transfer ct  (cost=0.00..750.20 rows=35320 width=20) (actual time=0.003..2.933 rows=35320 loops=1)
+                                                        Filter: (received_at IS NOT NULL)
+                                                        Buffers: shared hit=397
+        ->  Hash  (cost=8.31..8.31 rows=1 width=44) (actual time=0.022..0.022 rows=1 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 9kB
+              Buffers: shared hit=3
+              ->  Index Scan using unit_passport_uid_key on unit u  (cost=0.29..8.31 rows=1 width=44) (actual time=0.019..0.019 rows=1 loops=1)
+                    Index Cond: (passport_uid = '5198f11a-bb73-4d4d-a145-69fa11da56e1'::uuid)
+                    Buffers: shared hit=3
+  ->  Hash Join  (cost=1.68..13.87 rows=400 width=113) (actual time=0.016..0.103 rows=400 loops=1)
+        Hash Cond: (m.manufacturer_id = o.org_id)
+        Buffers: shared hit=8
+        ->  Seq Scan on part_model m  (cost=0.00..11.00 rows=400 width=99) (actual time=0.004..0.043 rows=400 loops=1)
+              Buffers: shared hit=7
+        ->  Hash  (cost=1.30..1.30 rows=30 width=22) (actual time=0.007..0.008 rows=30 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 10kB
+              Buffers: shared hit=1
+              ->  Seq Scan on organization o  (cost=0.00..1.30 rows=30 width=22) (actual time=0.002..0.004 rows=30 loops=1)
+                    Buffers: shared hit=1
+  SubPlan 1
+    ->  Index Scan using assembly_link_excl on assembly_link a  (cost=0.28..8.29 rows=1 width=8) (actual time=0.247..0.247 rows=0 loops=1)
+          Index Cond: (child_unit_id = u.unit_id)
+          Filter: (removed_at IS NULL)
+          Buffers: shared hit=30
+Planning:
+  Buffers: shared hit=876
+Planning Time: 1.463 ms
+Execution Time: 214.834 ms

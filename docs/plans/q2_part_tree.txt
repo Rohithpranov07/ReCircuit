@@ -1,0 +1,49 @@
+-- q2_part_tree
+-- Q2 part tree of device 4827 on 2025-06-01 (fn_part_tree body as plain SQL; NFR-6 target < 300 ms)
+EXPLAIN (ANALYZE, BUFFERS) WITH RECURSIVE bom AS (
+    SELECT 1 AS depth, a.child_unit_id, a.parent_unit_id FROM assembly_link a
+    WHERE a.parent_unit_id = 4827 AND tstzrange(a.installed_at, a.removed_at) @> '2025-06-01T00:00:00Z'::timestamptz
+    UNION ALL
+    SELECT b.depth + 1, a.child_unit_id, a.parent_unit_id FROM assembly_link a JOIN bom b ON a.parent_unit_id = b.child_unit_id
+    WHERE tstzrange(a.installed_at, a.removed_at) @> '2025-06-01T00:00:00Z'::timestamptz AND b.depth < 10)
+  SELECT b.depth, u.unit_id, b.parent_unit_id, u.serial_no, m.model_number, m.category
+  FROM bom b JOIN unit u ON u.unit_id = b.child_unit_id JOIN part_model m ON m.model_id = u.model_id ORDER BY b.depth, m.category
+
+Sort  (cost=2865.73..2866.38 rows=263 width=51) (actual time=0.178..0.179 rows=5 loops=1)
+  Sort Key: b.depth, m.category
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=44
+  CTE bom
+    ->  Recursive Union  (cost=0.29..1380.32 rows=263 width=20) (actual time=0.025..0.036 rows=5 loops=1)
+          Buffers: shared hit=16
+          ->  Index Scan using assembly_link_parent on assembly_link a  (cost=0.29..13.90 rows=3 width=20) (actual time=0.024..0.026 rows=5 loops=1)
+                Index Cond: (parent_unit_id = 4827)
+                Filter: (tstzrange(installed_at, removed_at) @> '2025-06-01 00:00:00+00'::timestamp with time zone)
+                Buffers: shared hit=6
+          ->  Nested Loop  (cost=0.29..136.38 rows=26 width=20) (actual time=0.008..0.008 rows=0 loops=1)
+                Buffers: shared hit=10
+                ->  WorkTable Scan on bom b_1  (cost=0.00..0.67 rows=10 width=12) (actual time=0.001..0.001 rows=5 loops=1)
+                      Filter: (depth < 10)
+                ->  Index Scan using assembly_link_parent on assembly_link a_1  (cost=0.29..13.53 rows=3 width=16) (actual time=0.001..0.001 rows=0 loops=5)
+                      Index Cond: (parent_unit_id = b_1.child_unit_id)
+                      Filter: (tstzrange(installed_at, removed_at) @> '2025-06-01 00:00:00+00'::timestamp with time zone)
+                      Buffers: shared hit=10
+  ->  Hash Join  (cost=16.29..1474.83 rows=263 width=51) (actual time=0.146..0.163 rows=5 loops=1)
+        Hash Cond: (u.model_id = m.model_id)
+        Buffers: shared hit=38
+        ->  Nested Loop  (cost=0.29..1458.13 rows=263 width=36) (actual time=0.042..0.057 rows=5 loops=1)
+              Buffers: shared hit=31
+              ->  CTE Scan on bom b  (cost=0.00..5.26 rows=263 width=20) (actual time=0.026..0.037 rows=5 loops=1)
+                    Buffers: shared hit=16
+              ->  Index Scan using unit_pkey on unit u  (cost=0.29..5.52 rows=1 width=24) (actual time=0.003..0.003 rows=1 loops=5)
+                    Index Cond: (unit_id = b.child_unit_id)
+                    Buffers: shared hit=15
+        ->  Hash  (cost=11.00..11.00 rows=400 width=23) (actual time=0.082..0.082 rows=400 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 30kB
+              Buffers: shared hit=7
+              ->  Seq Scan on part_model m  (cost=0.00..11.00 rows=400 width=23) (actual time=0.003..0.040 rows=400 loops=1)
+                    Buffers: shared hit=7
+Planning:
+  Buffers: shared hit=418
+Planning Time: 0.636 ms
+Execution Time: 0.225 ms

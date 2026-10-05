@@ -1,0 +1,24 @@
+-- q6_certificate_backing
+-- Q6 certificates whose backing is below the claim
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM v_certificate_backing WHERE backed_kg < claimed_kg
+
+HashAggregate  (cost=703.02..713.68 rows=164 width=96) (actual time=7.817..7.818 rows=0 loops=1)
+  Group Key: c.cert_id
+  Filter: (round((COALESCE(sum(cu.recovered_mass_g), '0'::numeric) / '1000'::numeric), 3) < c.quantity_kg)
+  Batches: 1  Memory Usage: 297kB
+  Rows Removed by Filter: 492
+  Buffers: shared hit=175
+  ->  Hash Right Join  (cost=22.07..510.58 rows=25658 width=70) (actual time=0.121..4.869 rows=25658 loops=1)
+        Hash Cond: (cu.cert_id = c.cert_id)
+        Buffers: shared hit=175
+        ->  Seq Scan on certificate_unit cu  (cost=0.00..420.58 rows=25658 width=22) (actual time=0.002..1.295 rows=25658 loops=1)
+              Buffers: shared hit=164
+        ->  Hash  (cost=15.92..15.92 rows=492 width=56) (actual time=0.109..0.109 rows=492 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 51kB
+              Buffers: shared hit=11
+              ->  Seq Scan on epr_certificate c  (cost=0.00..15.92 rows=492 width=56) (actual time=0.007..0.051 rows=492 loops=1)
+                    Buffers: shared hit=11
+Planning:
+  Buffers: shared hit=326
+Planning Time: 0.472 ms
+Execution Time: 7.875 ms

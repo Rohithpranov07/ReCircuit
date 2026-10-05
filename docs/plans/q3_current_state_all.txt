@@ -1,0 +1,58 @@
+-- q3_current_state_all
+-- Q3 current state of every unit, grouped (report scan; NFR-6 reports < 2 s)
+EXPLAIN (ANALYZE, BUFFERS) SELECT current_state, count(*) FROM v_unit_current GROUP BY 1 ORDER BY 1
+
+Sort  (cost=77789.02..77789.04 rows=9 width=18) (actual time=214.142..214.144 rows=6 loops=1)
+  Sort Key: le.event_type
+  Sort Method: quicksort  Memory: 25kB
+  Buffers: shared hit=104357, temp read=342 written=343
+  ->  HashAggregate  (cost=77788.78..77788.87 rows=9 width=18) (actual time=214.125..214.128 rows=6 loops=1)
+        Group Key: le.event_type
+        Batches: 1  Memory Usage: 24kB
+        Buffers: shared hit=104354, temp read=342 written=343
+        ->  Merge Left Join  (cost=14012.26..77038.09 rows=50046 width=46) (actual time=38.448..208.767 rows=50046 loops=1)
+              Merge Cond: (u.unit_id = lr.unit_id)
+              Buffers: shared hit=104354, temp read=342 written=343
+              ->  Merge Left Join  (cost=0.71..59413.37 rows=50046 width=18) (actual time=0.026..129.339 rows=50046 loops=1)
+                    Merge Cond: (u.unit_id = le.unit_id)
+                    Buffers: shared hit=103262
+                    ->  Index Only Scan using unit_pkey on unit u  (cost=0.29..1640.96 rows=50046 width=8) (actual time=0.005..4.544 rows=50046 loops=1)
+                          Heap Fetches: 19444
+                          Buffers: shared hit=4922
+                    ->  Materialize  (cost=0.42..57614.79 rows=2600 width=18) (actual time=0.019..116.172 rows=50046 loops=1)
+                          Buffers: shared hit=98340
+                          ->  Subquery Scan on le  (cost=0.42..57608.29 rows=2600 width=18) (actual time=0.018..109.153 rows=50046 loops=1)
+                                Filter: (le.rn = 1)
+                                Buffers: shared hit=98340
+                                ->  WindowAgg  (cost=0.42..51108.77 rows=519962 width=46) (actual time=0.017..105.813 rows=50046 loops=1)
+                                      Run Condition: (row_number() OVER (?) <= 1)
+                                      Buffers: shared hit=98340
+                                      ->  Index Scan using lifecycle_event_unit_time on lifecycle_event e  (cost=0.42..42009.43 rows=519962 width=26) (actual time=0.013..69.787 rows=519962 loops=1)
+                                            Buffers: shared hit=98340
+              ->  Materialize  (cost=14011.55..17492.92 rows=535 width=8) (actual time=38.421..71.127 rows=50046 loops=1)
+                    Buffers: shared hit=1092, temp read=342 written=343
+                    ->  Subquery Scan on lr  (cost=14011.55..17491.59 rows=535 width=8) (actual time=38.417..65.331 rows=50046 loops=1)
+                          Filter: (lr.rn = 1)
+                          Buffers: shared hit=1092, temp read=342 written=343
+                          ->  WindowAgg  (cost=14011.55..16153.11 rows=107078 width=28) (actual time=38.417..62.063 rows=50046 loops=1)
+                                Run Condition: (row_number() OVER (?) <= 1)
+                                Buffers: shared hit=1092, temp read=342 written=343
+                                ->  Sort  (cost=14011.55..14279.25 rows=107078 width=16) (actual time=38.414..44.075 rows=107078 loops=1)
+                                      Sort Key: ti.unit_id, ct.received_at DESC
+                                      Sort Method: external merge  Disk: 2736kB
+                                      Buffers: shared hit=1092, temp read=342 written=343
+                                      ->  Hash Join  (cost=1191.70..3235.59 rows=107078 width=16) (actual time=6.023..23.940 rows=107078 loops=1)
+                                            Hash Cond: (ti.transfer_id = ct.transfer_id)
+                                            Buffers: shared hit=1089
+                                            ->  Seq Scan on transfer_item ti  (cost=0.00..1762.78 rows=107078 width=16) (actual time=0.003..5.358 rows=107078 loops=1)
+                                                  Buffers: shared hit=692
+                                            ->  Hash  (cost=750.20..750.20 rows=35320 width=16) (actual time=5.927..5.928 rows=35320 loops=1)
+                                                  Buckets: 65536  Batches: 1  Memory Usage: 2168kB
+                                                  Buffers: shared hit=397
+                                                  ->  Seq Scan on custody_transfer ct  (cost=0.00..750.20 rows=35320 width=16) (actual time=0.004..3.031 rows=35320 loops=1)
+                                                        Filter: (received_at IS NOT NULL)
+                                                        Buffers: shared hit=397
+Planning:
+  Buffers: shared hit=514
+Planning Time: 0.662 ms
+Execution Time: 214.493 ms
