@@ -1,11 +1,6 @@
 # secrets and local env
 .env
 
-# local-only working files (kept out of version control)
-CLAUDE.md
-docs/ReCircuit_Build_Instructions.md
-.claude/
-
 # python
 __pycache__/
 *.pyc
