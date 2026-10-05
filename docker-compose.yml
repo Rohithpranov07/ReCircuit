@@ -27,7 +27,15 @@ services:
       db:
         condition: service_healthy
 
-  # web:  enabled in T4.1
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
 
 volumes:
   recircuit_pgdata:

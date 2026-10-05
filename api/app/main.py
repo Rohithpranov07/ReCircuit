@@ -8,6 +8,7 @@ from typing import Any
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
@@ -56,6 +57,9 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
 
     app = FastAPI(title="ReCircuit API", version="1.0", lifespan=lifespan)
     app.state.settings = settings
+    if settings.cors_origins:
+        app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origins, allow_credentials=True,
+                           allow_methods=["*"], allow_headers=["Authorization", "Content-Type"])
     app.state.db = db
     app.state.auth = AuthState(settings)
     limiter = Limiter(key_func=get_remote_address)

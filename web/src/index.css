@@ -1,0 +1,23 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/schibsted-grotesk';
+@import '@fontsource/ibm-plex-mono/400.css';
+
+@theme {
+  --font-sans: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-bench: #e4e8e4;        /* page ground: anodised grey-green */
+  --color-tray: #f6f8f5;         /* panels */
+  --color-ink: #14201d;          /* text */
+  --color-ink-soft: #46544f;     /* secondary text, 7.4:1 on bench */
+  --color-trace: #0e5a4c;        /* primary: board green */
+  --color-trace-deep: #093d34;
+  --color-solder: #c3cac4;       /* hairlines */
+  --color-flux: #e0a526;         /* attention */
+  --color-fault: #a6322b;        /* refusals */
+}
+
+html { background: var(--color-bench); color: var(--color-ink); }
+body { font-family: var(--font-sans); font-size: 16px; line-height: 1.5; margin: 0; min-height: 100dvh; }
+:focus-visible { outline: 3px solid var(--color-flux); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
