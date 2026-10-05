@@ -133,3 +133,47 @@ class TestsRequest(BaseModel):
     occurred_at: AwareDatetime
     facility_id: int
     tests: list[TestInput] = Field(min_length=1)
+
+
+# --- custody, EPR (T3.5) ------------------------------------------------------------------------------------
+class IssueCertificateUnit(BaseModel):
+    unit_id: int
+    recovered_mass_g: float = Field(gt=0)
+
+
+class IssueCertificateRequest(BaseModel):
+    cert_no: str = Field(min_length=1, max_length=40)       # e.g. "RC-REC-2026-000412"
+    category: str = Field(min_length=1, max_length=20)      # CPCB EEE code, free text in v1.0
+    quantity_kg: float = Field(gt=0)
+    financial_year: str = Field(pattern=r"^[0-9]{4}-[0-9]{2}$")   # "2026-27"
+    issued_on: date
+    units: list[IssueCertificateUnit]
+
+
+class TransferItemInput(BaseModel):
+    unit_id: int
+    declared_condition: Condition
+
+
+class TransferCreate(BaseModel):
+    manifest_no: str = Field(min_length=1, max_length=30)
+    to_org_id: int
+    shipped_at: AwareDatetime
+    total_mass_kg: float = Field(gt=0)
+    items: list[TransferItemInput] = Field(min_length=1)
+
+
+class ReceiveRequest(BaseModel):
+    received_at: AwareDatetime
+    missing_unit_ids: list[int] = Field(default_factory=list)
+    extra_unit_ids: list[int] = Field(default_factory=list)
+
+
+class AllocateRequest(BaseModel):
+    producer_id: int
+
+
+class TargetRequest(BaseModel):
+    category: str = Field(min_length=1, max_length=20)
+    financial_year: str = Field(pattern=r"^[0-9]{4}-[0-9]{2}$")
+    target_kg: float = Field(gt=0)

@@ -14,7 +14,7 @@ from app.config import Settings
 from app.db import Database
 from app.errors import ApiException
 from app.routers import auth as auth_router
-from app.routers import catalogue, units
+from app.routers import catalogue, certificates, transfers, units
 
 API_PREFIX = "/api/v1"
 
@@ -36,7 +36,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     app.state.db = db
     app.state.auth = AuthState(settings)
     app.include_router(auth_router.router, prefix=API_PREFIX)
-    for r in (catalogue.router, units.router, units.inventory):
+    for r in (catalogue.router, units.router, units.inventory, transfers.router, certificates.router):
         app.include_router(r, prefix=API_PREFIX)
 
     @app.exception_handler(ApiException)
