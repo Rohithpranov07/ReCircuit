@@ -9,7 +9,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T1.3 Migration 005: event ledger (C3–C6) and audit log
 - [x] T1.4 Migrations 006–008: diagnostics, custody, EPR (C7–C10)
 - [x] T1.5 Migration 009: assembly procedures from the TRD
-- [ ] T1.6 Migration 010: routines defined by contract (E5)
+- [x] T1.6 Migration 010: routines defined by contract (E5)
 - [ ] T1.7 Migrations 011–012: views and indexes (E2)
 - [ ] T1.8 pgTAP safety suite: C1–C10 and the walkthrough
 - [ ] T2.1 Deterministic seed generator
@@ -38,3 +38,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - Deferred / observations are recorded below, newest last.
 - T0.2: Docker daemon had to be started manually. rc_owner is created without CREATEROLE per spec; T3.1 (roles migration) needs it, to be handled there.
 - T1.1: dbmate runs with DBMATE_MIGRATIONS_TABLE=dbmate.schema_migrations so public holds only domain tables (keeps the 6/18 table counts exact). Host port is configurable via DB_HOST_PORT.
+- T1.6: pgTAP lives in the db container (apt: postgresql-16-pgtap, pg_prove) and runs against a scratch database built from the migrations; `make db-test` formalises this in T1.8. The sp_refresh_material_recovery test is skipped until migration 011 exists, and its failure case needs the roles from T3.1 (re-enabled/extended there). Admin routines skip or self-attribute the audit row only when rc.actor_id is unset (first-administrator bootstrap); "not found" admin cases raise 23514 (INVALID_VALUE) because §B.4 has no dedicated code.
