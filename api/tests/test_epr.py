@@ -71,7 +71,7 @@ def cert_body(no: str, units: list[int], kg: float, grams: float = 1000) -> dict
 
 async def test_custody_manifest_flow(app: Any, http: httpx.AsyncClient, cast: Cast) -> None:
     coll, rec, tech = auth(app, cast.collector), auth(app, cast.recycler), auth(app, cast.world.technician())
-    body = {"manifest_no": "MF-API-1", "to_org_id": cast.recycler.org_id, "shipped_at": at(3), "total_mass_kg": 1.2,
+    body: dict[str, Any] = {"manifest_no": "MF-API-1", "to_org_id": cast.recycler.org_id, "shipped_at": at(3), "total_mass_kg": 1.2,
             "items": [{"unit_id": cast.other[0], "declared_condition": "SCRAP"},
                       {"unit_id": cast.other[1], "declared_condition": "FAULTY"}]}
     created = await http.post("/api/v1/transfers", headers=coll, json=body)
