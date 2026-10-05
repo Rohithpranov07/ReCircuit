@@ -9,7 +9,8 @@ set -euo pipefail
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres \
      -v owner_pw="$RC_OWNER_PASSWORD" -v app_pw="$RC_APP_PASSWORD" <<'SQL'
-CREATE ROLE rc_owner LOGIN PASSWORD :'owner_pw';
+-- CREATEROLE: migration 013 creates the NOLOGIN access roles as rc_owner (it needs no other privilege)
+CREATE ROLE rc_owner LOGIN CREATEROLE PASSWORD :'owner_pw';
 CREATE ROLE rc_app   LOGIN NOINHERIT PASSWORD :'app_pw';
 CREATE DATABASE recircuit OWNER rc_owner;
 SQL

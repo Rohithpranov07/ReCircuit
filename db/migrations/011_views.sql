@@ -91,12 +91,16 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   ORDER BY e.event_id DESC, t.test_id DESC LIMIT 1
 $$;
 
--- owner-rights view (deliberately not security_invoker): the one thing public_reader may read
+-- owner-rights view (deliberately not security_invoker): the one thing public_reader may read.
+-- It reads the latest event itself instead of joining v_unit_current: a security_invoker view nested inside an
+-- owner-rights view is checked against the *calling* role, which would give public_reader a need for table
+-- privileges (erratum E6). Same columns, same values as the TRD version.
 CREATE VIEW v_public_passport AS
 SELECT u.passport_uid,
        m.model_number, m.category, o.org_name AS manufacturer,
        u.manufactured_on,
-       c.current_state,
+       (SELECT e.event_type FROM lifecycle_event e
+         WHERE e.unit_id = u.unit_id ORDER BY e.event_id DESC LIMIT 1)    AS current_state,
        (SELECT jsonb_agg(jsonb_build_object('type', e.event_type,
                                             'date', e.occurred_at::date) ORDER BY e.event_id)
           FROM lifecycle_event e WHERE e.unit_id = u.unit_id)              AS history,
@@ -104,8 +108,7 @@ SELECT u.passport_uid,
        (sp_verify_chain(u.unit_id) IS NULL)                               AS chain_verified
 FROM unit u
 JOIN part_model m   ON m.model_id = u.model_id
-JOIN organization o ON o.org_id = m.manufacturer_id
-JOIN v_unit_current c ON c.unit_id = u.unit_id;
+JOIN organization o ON o.org_id = m.manufacturer_id;
 -- SECURITY BARRIER so filters cannot leak rows
 ALTER VIEW v_public_passport SET (security_barrier = true);
 
