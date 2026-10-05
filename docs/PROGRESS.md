@@ -12,7 +12,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T1.6 Migration 010: routines defined by contract (E5)
 - [x] T1.7 Migrations 011–012: views and indexes (E2)
 - [x] T1.8 pgTAP safety suite: C1–C10 and the walkthrough
-- [ ] T2.1 Deterministic seed generator
+- [x] T2.1 Deterministic seed generator
 - [ ] T2.2 Query evidence for Q1–Q8
 - [ ] T3.1 Migration 013: roles, grants, RLS
 - [ ] T3.2 API skeleton: config, pipeline, error mapper
@@ -40,3 +40,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - T1.1: dbmate runs with DBMATE_MIGRATIONS_TABLE=dbmate.schema_migrations so public holds only domain tables (keeps the 6/18 table counts exact). Host port is configurable via DB_HOST_PORT.
 - T1.6: pgTAP lives in the db container (apt: postgresql-16-pgtap, pg_prove) and runs against a scratch database built from the migrations; `make db-test` formalises this in T1.8. The sp_refresh_material_recovery test is skipped until migration 011 exists, and its failure case needs the roles from T3.1 (re-enabled/extended there). Admin routines skip or self-attribute the audit row only when rc.actor_id is unset (first-administrator bootstrap); "not found" admin cases raise 23514 (INVALID_VALUE) because §B.4 has no dedicated code.
 - T1.8: `make db-test` builds a scratch database `recircuit_test` from the migrations, installs pgTAP (apt, first use) and runs db/tests/t*.sql: 114 tests, all green. The walkthrough fixture uses past dates (Aug–Sep 2026) and adds a producer-to-collector manifest and a second loose battery so Q7 has no false positives and the reuse inventory has a health-86 entry (a reinstalled battery is correctly no longer loose stock). A self-parent link is refused by the cycle trigger (RC002) before the CHECK runs. T-C10b is covered both with SET CONSTRAINTS (t07) and at a real COMMIT (t07b).
+- T2.1: `python -m seed --profile small|large --seed N [--jobs K] [--dsn URL]` (run from the repo root with the venv in api/.venv; the DSN defaults to the rc_owner login on localhost:$DB_HOST_PORT). small: 8 orgs, 40 models, 505 units, 3,763 events; two fresh-database runs print identical counts and event-hash digest. Determinism of ids/hashes holds for --jobs 1; with more jobs scenario content is still identical but ids may differ. Exception to "no direct inserts": the `material` reference rows are inserted directly because no routine exists for them. The seed also plants deliberate custody gaps (no manifest at the recycler) and missing-unit discrepancies so Q7 and the auditor screens have data; Q7 returns exactly the planted gap units on the small profile.

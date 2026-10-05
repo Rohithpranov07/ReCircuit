@@ -1,0 +1,26 @@
+[project]
+name = "recircuit"
+version = "0.1.0"
+description = "ReCircuit API and seed generator"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+# dependencies of the seed generator (python -m seed); the API's own dependencies are added in T3.2
+seed = [
+  "psycopg[binary,pool]==3.3.6",
+  "faker==40.40.0",
+  "bcrypt==4.0.1",
+]
+dev = [
+  "ruff==0.16.10",
+  "mypy==2.4.0",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.mypy]
+strict = true
+ignore_missing_imports = false
