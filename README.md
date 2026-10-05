@@ -19,4 +19,15 @@ docker compose up -d db       # PostgreSQL 16; first start creates database `rec
 The bootstrap script runs only on an empty data volume. To start over:
 `docker compose down -v && docker compose up -d db`.
 
+### Migrations
+
+dbmate keeps its bookkeeping table in its own schema so the `public` schema holds only domain objects:
+
+```bash
+export DBMATE_MIGRATIONS_TABLE=dbmate.schema_migrations DBMATE_NO_DUMP_SCHEMA=true
+dbmate --url "postgres://rc_owner:<RC_OWNER_PASSWORD>@localhost:5432/recircuit?sslmode=disable" -d db/migrations up
+```
+
+If port 5432 is already used on your machine, set `DB_HOST_PORT` in `.env` (for example `5433`) and use that port in the URL.
+
 More setup steps are added as the stack comes online.
