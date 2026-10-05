@@ -11,7 +11,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T1.5 Migration 009: assembly procedures from the TRD
 - [x] T1.6 Migration 010: routines defined by contract (E5)
 - [x] T1.7 Migrations 011–012: views and indexes (E2)
-- [ ] T1.8 pgTAP safety suite: C1–C10 and the walkthrough
+- [x] T1.8 pgTAP safety suite: C1–C10 and the walkthrough
 - [ ] T2.1 Deterministic seed generator
 - [ ] T2.2 Query evidence for Q1–Q8
 - [ ] T3.1 Migration 013: roles, grants, RLS
@@ -39,3 +39,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - T0.2: Docker daemon had to be started manually. rc_owner is created without CREATEROLE per spec; T3.1 (roles migration) needs it, to be handled there.
 - T1.1: dbmate runs with DBMATE_MIGRATIONS_TABLE=dbmate.schema_migrations so public holds only domain tables (keeps the 6/18 table counts exact). Host port is configurable via DB_HOST_PORT.
 - T1.6: pgTAP lives in the db container (apt: postgresql-16-pgtap, pg_prove) and runs against a scratch database built from the migrations; `make db-test` formalises this in T1.8. The sp_refresh_material_recovery test is skipped until migration 011 exists, and its failure case needs the roles from T3.1 (re-enabled/extended there). Admin routines skip or self-attribute the audit row only when rc.actor_id is unset (first-administrator bootstrap); "not found" admin cases raise 23514 (INVALID_VALUE) because §B.4 has no dedicated code.
+- T1.8: `make db-test` builds a scratch database `recircuit_test` from the migrations, installs pgTAP (apt, first use) and runs db/tests/t*.sql: 114 tests, all green. The walkthrough fixture uses past dates (Aug–Sep 2026) and adds a producer-to-collector manifest and a second loose battery so Q7 has no false positives and the reuse inventory has a health-86 entry (a reinstalled battery is correctly no longer loose stock). A self-parent link is refused by the cycle trigger (RC002) before the CHECK runs. T-C10b is covered both with SET CONSTRAINTS (t07) and at a real COMMIT (t07b).
