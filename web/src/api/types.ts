@@ -85,3 +85,22 @@ export interface CertificateRow {     // GET /certificates
 export interface PassportRef {        // GET /reports/passport?unit_id=
   unit_id: number; passport_uid: string;
 }
+
+// --- read models used by the workbenches (T4.3) ----------------------------------------------------------
+export interface Me {                 // GET /auth/me
+  actor_id: number; full_name: string; role: Role; org_id: number; org_name: string; org_type: OrgType;
+  facilities: { facility_id: number; facility_name: string }[];
+}
+export interface OrgRow {             // GET /organizations
+  org_id: number; org_name: string; org_type: OrgType;
+  facilities: { facility_id: number; facility_name: string; pincode: string }[];
+}
+export interface ModelRow {           // GET /models
+  model_id: number; model_number: string; category: Category; mass_g: string; spec: Record<string, unknown>;
+  manufacturer_id: number; manufacturer: string;
+}
+export interface ReuseRow {           // GET /inventory/reuse
+  unit_id: number; passport_uid: string; category: Category; model_number: string;
+  latest_health: number | null; test_type: string | null; tested_at: string | null; current_holder_org_id: number | null;
+}
+export interface EventResult { event_type: EventType; event_hash: string }

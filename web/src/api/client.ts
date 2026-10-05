@@ -1,3 +1,4 @@
+import { FRIENDLY } from './messages';
 import type { ApiError, Session, TokenResponse } from './types';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:8000/api/v1';
@@ -7,7 +8,7 @@ export class ApiException extends Error {
   readonly code: string;
   readonly constraint: string | null;
   constructor(status: number, body: ApiError['error']) {
-    super(body.message);
+    super(FRIENDLY[body.code] ?? body.message);
     this.status = status;
     this.code = body.code;
     this.constraint = body.constraint;

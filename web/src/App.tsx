@@ -12,6 +12,14 @@ import type { Role } from './api/types';
 const PassportPage = lazy(() => import('./routes/passport/PassportPage'));
 const PublicPassportPage = lazy(() => import('./routes/public/PublicPassportPage'));
 
+const CollectorPage = lazy(() => import('./routes/collector/CollectorPage'));
+const TechnicianPage = lazy(() => import('./routes/technician/TechnicianPage'));
+
+const HOME_SCREEN: Partial<Record<Role, JSX.Element>> = {
+  COLLECTOR: <CollectorPage />,
+  TECHNICIAN: <TechnicianPage />,
+};
+
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
 
 export default function App() {
@@ -29,7 +37,7 @@ export default function App() {
               </Route>
               {(Object.keys(ROLE_HOME) as Role[]).map((role) => (
                 <Route key={role} element={<RequireAuth roles={[role]} />}>
-                  <Route path={ROLE_HOME[role]} element={<RoleHome />} />
+                  <Route path={ROLE_HOME[role]} element={HOME_SCREEN[role] ?? <RoleHome />} />
                 </Route>
               ))}
               <Route path="*" element={<Navigate to="/login" replace />} />

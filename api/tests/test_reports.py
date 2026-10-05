@@ -124,3 +124,14 @@ async def test_admin_creates_a_working_account_and_deactivates_it(
     assert (dup.status_code, dup.json()["error"]["code"]) == (409, "DUPLICATE")
     orgs = (await http.get("/api/v1/organizations", headers=adm)).json()
     assert any(o["org_id"] == org and o["facilities"][0]["facility_id"] == fac for o in orgs)
+
+
+async def test_me_and_the_organisation_directory_for_staff(app: Any, http: httpx.AsyncClient, world: World) -> None:
+    tech = auth(app, world.technician())
+    me = (await http.get("/api/v1/auth/me", headers=tech)).json()
+    assert (me["role"], me["org_id"]) == ("TECHNICIAN", world.org_t)
+    assert world.fac_t in [f["facility_id"] for f in me["facilities"]]
+    assert (await http.get("/api/v1/auth/me")).status_code == 401
+    orgs = (await http.get("/api/v1/organizations", headers=tech)).json()
+    assert {o["org_id"] for o in orgs} >= {world.org_p, world.org_t}
+    assert (await http.post("/api/v1/organizations", headers=tech, json={"org_name": "X", "org_type": "RECYCLER"})).status_code == 403

@@ -5,6 +5,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 
+from app.allowlist import ROLE_MAP
 from app.auth import AuthState, auth_state, require_roles
 from app.db import Claims, Database
 from app.schemas import ActorCreate, ActorPatch, FacilityCreate, OrganizationCreate
@@ -19,7 +20,9 @@ def _db(request: Request) -> Database:
 
 
 @router.get("/organizations")
-async def list_organizations(request: Request, claims: Claims = Depends(ADMIN)) -> list[dict[str, Any]]:
+async def list_organizations(request: Request, claims: Claims = Depends(
+        require_roles(*ROLE_MAP))) -> list[dict[str, Any]]:
+    """Directory of organisations and their facilities. Staff read it to choose a manifest recipient."""
     return await _db(request).query(
         claims,
         """SELECT o.org_id, o.org_name, o.org_type, o.cpcb_reg_no, o.gstin,
