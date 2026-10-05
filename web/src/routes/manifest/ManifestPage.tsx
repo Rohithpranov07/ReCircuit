@@ -16,7 +16,7 @@ export default function ManifestPage() {
       {!isPending && !t && <p role="alert" className="rounded-md border border-fault bg-white p-4 text-fault">This manifest is not one of yours, or it does not exist.</p>}
       {t && (
         <>
-          <h1 className="text-2xl font-semibold tracking-tight">{t.manifest_no}</h1>
+          <h1 className="h-page">{t.manifest_no}</h1>
           <p className="mt-1 text-ink-soft">{t.from_org} to {t.to_org}</p>
           <dl className="mt-4 grid max-w-md grid-cols-[9rem_1fr] gap-y-2">
             <dt className="text-ink-soft">Shipped</dt><dd>{fmt.format(new Date(t.shipped_at))}</dd>
@@ -24,7 +24,7 @@ export default function ManifestPage() {
             <dt className="text-ink-soft">Declared mass</dt><dd>{t.total_mass_kg} kg</dd>
           </dl>
           <div className="mt-6"><Panel title={`Units (${t.items.length})`}>
-            <ul className="divide-y divide-solder">
+            <ul className="divide-y-[1.5px] divide-dotted divide-obsidian/40">
               {t.items.map((i) => {
                 const flag = t.discrepancies.find((d) => d.unit_id === i.unit_id);
                 return (

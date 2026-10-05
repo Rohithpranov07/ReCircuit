@@ -9,7 +9,7 @@ export default function RoleHome() {
   if (!session) return null;
   return (
     <AppShell>
-      <h1 className="text-2xl font-semibold tracking-tight">{ROLE_LABELS[session.role]} workspace</h1>
+      <h1 className="h-page">{ROLE_LABELS[session.role]} workspace</h1>
       <div className="mt-6"><PassportFinder /></div>
     </AppShell>
   );

@@ -55,7 +55,7 @@ export function CertificateWizard({ me, onDone }: { me: Me; onDone: () => void }
       <ol className="mb-5 flex gap-2 text-sm" aria-label="Steps">
         {STEPS.map((s, i) => (
           <li key={s} aria-current={i === step ? 'step' : undefined}
-              className={`rounded-sm px-3 py-1 ${i === step ? 'bg-trace text-white' : 'bg-bench text-ink-soft'}`}>{i + 1}. {s}</li>
+              className={`rounded-full px-4 py-1.5 ${i === step ? 'bg-ember text-obsidian' : 'bg-pumice text-ink-soft'}`}>{i + 1}. {s}</li>
         ))}
       </ol>
 
@@ -73,7 +73,7 @@ export function CertificateWizard({ me, onDone }: { me: Me; onDone: () => void }
         <div>
           {held.isPending ? <p className="text-ink-soft">Loading units…</p> : candidates.length === 0
             ? <p className="text-ink-soft">No recycled units are waiting for a certificate. Mark units as recycled first.</p> : (
-              <ul className="divide-y divide-solder rounded-md border border-solder bg-white">
+              <ul className="divide-y-[1.5px] divide-dotted divide-obsidian/40 rounded-[24px] bg-chalk">
                 {candidates.map((u) => (
                   <li key={u.unit_id} className="flex flex-wrap items-center gap-3 p-2">
                     <label className="flex flex-1 items-center gap-2">
@@ -82,7 +82,7 @@ export function CertificateWizard({ me, onDone }: { me: Me; onDone: () => void }
                     </label>
                     {u.unit_id in chosen && (
                       <label className="flex items-center gap-2 text-sm">Recovered (g)
-                        <input aria-label={`Recovered grams for ${u.serial_no}`} inputMode="decimal" className="w-24 rounded-md border border-solder px-2 py-1"
+                        <input aria-label={`Recovered grams for ${u.serial_no}`} inputMode="decimal" className="w-24 rounded-full border-[1.5px] border-obsidian bg-white px-3 py-1"
                                value={chosen[u.unit_id]} onChange={(e) => setChosen((all) => ({ ...all, [u.unit_id]: e.target.value }))} />
                       </label>
                     )}

@@ -28,7 +28,7 @@ export default function RecyclerPage() {
   const facilityId = facility ?? me.data?.facilities[0]?.facility_id ?? 0;
   return (
     <AppShell wide>
-      <h1 className="text-2xl font-semibold tracking-tight">Recycler workspace</h1>
+      <h1 className="h-page">Recycler workspace</h1>
       {me.data && <div className="mt-3"><FacilityField me={me.data} value={facilityId} onChange={setFacility} /></div>}
       <div className="mt-5"><Tabs label="Recycler tasks" tabs={TABS} active={tab} onChange={setTab} /></div>
       <div className="mt-6 space-y-6">
@@ -67,8 +67,8 @@ function Incoming({ me }: { me: Me }) {
         ? <p className="text-ink-soft">No manifests are on their way to you.</p> : (
           <ul className="space-y-5">
             {waiting.map((t) => (
-              <li key={t.transfer_id} className="rounded-md border border-solder bg-white p-4">
-                <p className="font-medium"><Link to={`/manifest/${t.transfer_id}`} className="text-trace underline underline-offset-2">{t.manifest_no}</Link> <span className="font-normal text-ink-soft">from {t.from_org} · shipped {fmt.format(new Date(t.shipped_at))}</span></p>
+              <li key={t.transfer_id} className="rounded-[24px] bg-chalk p-5">
+                <p className=""><Link to={`/manifest/${t.transfer_id}`} className="text-obsidian underline decoration-ember decoration-2 underline-offset-4">{t.manifest_no}</Link> <span className="font-normal text-ink-soft">from {t.from_org} · shipped {fmt.format(new Date(t.shipped_at))}</span></p>
                 <fieldset className="mt-3">
                   <legend className="text-sm text-ink-soft">Tick any unit that did not arrive</legend>
                   <ul className="mt-2 space-y-1">
@@ -111,10 +111,10 @@ function Queue({ me, facilityId }: { me: Me; facilityId: number }) {
       {held.isPending ? <p className="text-ink-soft">Loading…</p> : queue.length === 0
         ? <p className="text-ink-soft">Nothing is waiting. Units appear here once a manifest to you has been received.</p> : (
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Model</th><th className="font-medium">Serial</th><th className="font-medium">State</th><th /></tr></thead>
+            <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Model</th><th className="">Serial</th><th className="">State</th><th /></tr></thead>
             <tbody>
               {queue.map((u) => (
-                <tr key={u.unit_id} className="border-t border-solder">
+                <tr key={u.unit_id} className="border-t-[1.5px] border-dotted border-obsidian/40">
                   <td className="py-2">{u.model_number}</td><td>{u.serial_no}</td><td>{u.current_state?.toLowerCase()}</td>
                   <td className="text-right"><Button variant="quiet" onClick={() => void recycle(u)}>Mark recycled</Button></td>
                 </tr>
@@ -147,11 +147,11 @@ function Certificates({ me }: { me: Me }) {
         <Button className="mb-4" onClick={() => setWizard((w) => !w)}>{wizard ? 'Close the wizard' : 'Issue a certificate'}</Button>
         {certs.isPending ? <p className="text-ink-soft">Loading…</p> : (certs.data ?? []).length === 0
           ? <p className="text-ink-soft">No certificates yet.</p> : (
-            <ul className="divide-y divide-solder">
+            <ul className="divide-y-[1.5px] divide-dotted divide-obsidian/40">
               {(certs.data ?? []).map((c) => (
                 <li key={c.cert_id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                   <div>
-                    <p className="font-medium">{c.cert_no}</p>
+                    <p className="">{c.cert_no}</p>
                     <p className="text-sm text-ink-soft">{c.category} · {c.financial_year} · {c.claimed_kg} kg claimed, {c.backed_kg} kg backed by {c.unit_count} units</p>
                   </div>
                   {c.producer ? <span className="text-sm">Allocated to {c.producer}</span> : (

@@ -48,26 +48,26 @@ export function PassportFinder() {
   }
 
   return (
-    <section aria-label="Find a passport" className="rounded-md border border-solder bg-tray p-4">
-      <h2 className="text-lg font-semibold">Find a passport</h2>
+    <section aria-label="Find a passport" className="rounded-[24px] bg-limestone p-5">
+      <h2 className="h-section">Find a passport</h2>
       <form onSubmit={submit} className="mt-3 flex flex-col gap-2 sm:flex-row">
         <label className="sr-only" htmlFor="passport-id">Passport ID</label>
         <input id="passport-id" value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste a passport ID or link"
-               className="min-w-0 flex-1 rounded-md border border-solder bg-white px-3 py-2" />
-        <button type="submit" className="rounded-md bg-trace px-4 py-2 font-medium text-white hover:bg-trace-deep">Open passport</button>
-        <button type="button" onClick={() => setScanning((s) => !s)} className="rounded-md border border-solder px-4 py-2">
+               className="min-w-0 flex-1 rounded-full border-[1.5px] border-obsidian bg-white px-5 py-2.5" />
+        <button type="submit" className="rounded-md bg-ember px-6 py-3 text-obsidian hover:bg-obsidian hover:text-chalk">Open passport</button>
+        <button type="button" onClick={() => setScanning((s) => !s)} className="rounded-full border-[1.5px] border-obsidian px-6 py-3 hover:bg-obsidian hover:text-chalk">
           {scanning ? 'Hide camera' : 'Scan QR code'}
         </button>
       </form>
       <form onSubmit={(e) => void bySerial(e)} className="mt-3 flex flex-col gap-2 sm:flex-row">
         <label className="sr-only" htmlFor="by-model">Model</label>
-        <select id="by-model" value={modelId} onChange={(e) => setModelId(e.target.value)} className="min-w-0 flex-1 rounded-md border border-solder bg-white px-3 py-2">
+        <select id="by-model" value={modelId} onChange={(e) => setModelId(e.target.value)} className="min-w-0 flex-1 rounded-full border-[1.5px] border-obsidian bg-white px-5 py-2.5">
           <option value="">Or look up by model…</option>
           {(models.data ?? []).map((m) => <option key={m.model_id} value={m.model_id}>{m.model_number}</option>)}
         </select>
         <label className="sr-only" htmlFor="by-serial">Serial number</label>
-        <input id="by-serial" value={serial} onChange={(e) => setSerial(e.target.value)} placeholder="Serial number" className="min-w-0 flex-1 rounded-md border border-solder bg-white px-3 py-2" />
-        <button type="submit" disabled={!modelId || !serial.trim()} className="rounded-md border border-solder px-4 py-2 disabled:opacity-50">Look up</button>
+        <input id="by-serial" value={serial} onChange={(e) => setSerial(e.target.value)} placeholder="Serial number" className="min-w-0 flex-1 rounded-full border-[1.5px] border-obsidian bg-white px-5 py-2.5" />
+        <button type="submit" disabled={!modelId || !serial.trim()} className="rounded-full border-[1.5px] border-obsidian px-6 py-3 hover:bg-obsidian hover:text-chalk disabled:opacity-50">Look up</button>
       </form>
       {problem && <p role="alert" className="mt-2 text-sm text-fault">{problem}</p>}
       {scanning && (

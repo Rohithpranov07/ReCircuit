@@ -27,7 +27,7 @@ export default function TechnicianPage() {
   const facilityId = facility ?? me.data?.facilities[0]?.facility_id ?? 0;
   return (
     <AppShell wide>
-      <h1 className="text-2xl font-semibold tracking-tight">Technician workbench</h1>
+      <h1 className="h-page">Technician workbench</h1>
       {me.data && <div className="mt-3"><FacilityField me={me.data} value={facilityId} onChange={setFacility} /></div>}
       <div className="mt-5"><Tabs label="Technician tasks" tabs={TABS} active={tab} onChange={setTab} /></div>
       <div className="mt-6 space-y-6">
@@ -113,11 +113,11 @@ function Workbench({ facilityId }: { facilityId: number }) {
             <div className="mt-4">
               <Button variant="quiet" onClick={() => void harvest()}>Harvest from its device</Button>
             </div>
-            <div className="mt-6 border-t border-solder pt-4">
+            <div className="mt-6 border-t-[1.5px] border-dotted border-obsidian/40 pt-4">
               <UnitLookup label="Reinstall into this device" onFound={setTarget} />
               <Button className="mt-4" disabled={!target} onClick={() => void reinstall()}>Reinstall</Button>
             </div>
-            {note && <p role="status" className="mt-4 text-trace">{note}</p>}
+            {note && <p role="status" className="mt-4 text-obsidian">{note}</p>}
           </Panel>
         </>
       )}
@@ -151,10 +151,10 @@ function Inventory() {
         ? <p className="text-ink-soft">No loose parts match. Lower the minimum health or choose another category.</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Model</th><th className="font-medium">Category</th><th className="text-right font-medium">Health</th><th className="font-medium">Last test</th><th /></tr></thead>
+              <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Model</th><th className="">Category</th><th className="text-right ">Health</th><th className="">Last test</th><th /></tr></thead>
               <tbody>
                 {(data ?? []).map((r) => (
-                  <tr key={r.unit_id} className="border-t border-solder">
+                  <tr key={r.unit_id} className="border-t-[1.5px] border-dotted border-obsidian/40">
                     <td className="py-2">{r.model_number}</td><td>{r.category.toLowerCase()}</td>
                     <td className="text-right tabular-nums">{r.latest_health ?? '—'}</td><td>{r.test_type ?? 'Not tested'}</td>
                     <td className="text-right"><Button variant="quiet" onClick={() => navigate(`/unit/${r.passport_uid}`)}>Open</Button></td>

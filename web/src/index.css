@@ -1,23 +1,50 @@
 @import 'tailwindcss';
-@import '@fontsource-variable/schibsted-grotesk';
+@import '@fontsource-variable/dm-sans/wght.css';
+@import '@fontsource/anton/400.css';
 @import '@fontsource/ibm-plex-mono/400.css';
 
+/* Caldera (DESIGN.md): forge orange on warm limestone. Flat surfaces, 40px cards, pill controls, no shadows.
+   Anton stands in for the licensed PP Neue Corp Compact (DESIGN.md names Anton as a substitute). */
 @theme {
-  --font-sans: 'Schibsted Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'DM Sans Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Anton', 'Bebas Neue', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  --color-bench: #e4e8e4;        /* page ground: anodised grey-green */
-  --color-tray: #f6f8f5;         /* panels */
-  --color-ink: #14201d;          /* text */
-  --color-ink-soft: #46544f;     /* secondary text, 7.4:1 on bench */
-  --color-trace: #0e5a4c;        /* primary: board green */
-  --color-trace-deep: #093d34;
-  --color-solder: #c3cac4;       /* hairlines */
-  --color-flux: #e0a526;         /* attention */
-  --color-fault: #a6322b;        /* refusals */
+  --color-ember: #fc5000;
+  --color-plasma-violet: #524ae9;
+  --color-sulfur: #f5f28e;
+  --color-limestone: #f7f6f2;
+  --color-pumice: #e2e2df;
+  --color-obsidian: #070607;
+  --color-chalk: #ffffff;
+
+  /* semantic names used across the screens */
+  --color-bench: var(--color-pumice);        /* page canvas */
+  --color-tray: var(--color-limestone);      /* cards */
+  --color-ink: var(--color-obsidian);
+  --color-ink-soft: #4b4a47;                 /* secondary text, 7:1 on pumice */
+  --color-solder: #b8b7b2;                   /* hairlines */
+  --color-fault: #b3261e;                    /* refusals only; never decoration */
+
+  --radius-sm: 16px;
+  --radius-md: 20px;
+  --radius-lg: 40px;
+  --radius-xl: 40px;
+  --shadow-lg: 0 0 #0000;                    /* the system is shadowless */
+  --shadow-md: 0 0 #0000;
 }
 
-html { background: var(--color-bench); color: var(--color-ink); }
-body { font-family: var(--font-sans); font-size: 16px; line-height: 1.5; margin: 0; min-height: 100dvh; }
-:focus-visible { outline: 3px solid var(--color-flux); outline-offset: 2px; }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+html { background: var(--color-pumice); color: var(--color-obsidian); scroll-behavior: smooth; }
+body { font-family: var(--font-sans); font-weight: 500; font-size: 16px; line-height: 1.55; margin: 0; min-height: 100dvh; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; line-height: 1; text-wrap: balance; }
+:focus-visible { outline: 3px solid var(--color-obsidian); outline-offset: 3px; border-radius: 9999px; }
+::selection { background: var(--color-ember); color: var(--color-obsidian); }
+button, a, select, input { transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .18s ease; }
+button:active:not(:disabled) { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* type roles from DESIGN.md: structural headings stay at 48px and up, section titles at 26px and up */
+@utility h-page { font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; line-height: 1; font-size: clamp(2.75rem, 6vw, 4.5rem); }
+@utility h-section { font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; line-height: 1.1; font-size: 1.625rem; }
+@utility h-stat { font-family: var(--font-display); font-weight: 400; letter-spacing: .02em; line-height: 1.05; font-size: clamp(3.5rem, 8vw, 5rem); }
+@utility tabular { font-variant-numeric: tabular-nums; }

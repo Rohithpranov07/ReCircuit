@@ -8,10 +8,10 @@ const fmt = new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: '
 export function Timeline({ events }: { events: UnitEvent[] }) {
   if (events.length === 0) return <p className="text-ink-soft">No events have been recorded for this unit yet.</p>;
   return (
-    <ol className="relative ml-2 border-l-2 border-solder">
+    <ol className="relative ml-2 border-l-[1.5px] border-dotted border-obsidian/60">
       {events.map((e) => (
         <li key={e.event_id} className="relative pb-6 pl-6 last:pb-0">
-          <span aria-hidden className="absolute -left-[7px] top-1.5 size-3 rounded-full ring-4 ring-bench"
+          <span aria-hidden className="absolute -left-[7px] top-1.5 size-3 rounded-full ring-4 ring-pumice"
                 style={{ background: EVENT_COLORS[e.event_type].dot }} />
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <EventBadge type={e.event_type} />

@@ -5,7 +5,7 @@ import type { ActorRow, AdminOrgRow, Dashboard, OrgType, Role } from '../../api/
 import { ROLE_LABELS } from '../../auth/roles';
 import { AppShell } from '../../components/AppShell';
 import { useToast } from '../../components/Toast';
-import { Button, Field, Panel, Tabs, inputClass } from '../../components/ui';
+import { Button, Field, Panel, Stat, Tabs, inputClass } from '../../components/ui';
 
 const TABS = ['Overview', 'Organisations', 'Users'] as const;
 type Tab = (typeof TABS)[number];
@@ -17,7 +17,7 @@ export default function AdminPage() {
   const [tab, setTab] = useState<Tab>('Overview');
   return (
     <AppShell wide>
-      <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
+      <h1 className="h-page">Administration</h1>
       <div className="mt-5"><Tabs label="Administration" tabs={TABS} active={tab} onChange={setTab} /></div>
       <div className="mt-6 space-y-6">{tab === 'Overview' ? <Overview /> : tab === 'Organisations' ? <Organisations /> : <Users />}</div>
     </AppShell>
@@ -33,7 +33,7 @@ function Overview() {
         <table className="w-full text-sm">
           <tbody>
             {data.units_by_state.map((s) => (
-              <tr key={s.state} className="border-t border-solder first:border-0">
+              <tr key={s.state} className="border-t-[1.5px] border-dotted border-obsidian/40 first:border-0">
                 <td className="py-1.5">{s.state.toLowerCase()}</td><td className="text-right tabular-nums">{s.units.toLocaleString('en-IN')}</td>
               </tr>
             ))}
@@ -41,8 +41,8 @@ function Overview() {
         </table>
       </Panel>
       <div className="space-y-6">
-        <Panel title="Manifests not yet received"><p className="text-3xl font-semibold tabular-nums">{data.open_manifests}</p></Panel>
-        <Panel title={`Certificates issued in ${data.financial_year}`}><p className="text-3xl font-semibold tabular-nums">{data.certificates_this_year}</p></Panel>
+        <Stat label="Manifests not yet received" value={data.open_manifests} />
+        <Stat label={`Certificates issued in ${data.financial_year}`} value={data.certificates_this_year} />
       </div>
     </div>
   );
@@ -88,10 +88,10 @@ function Organisations() {
       </Panel>
       <Panel title="Organisations and facilities">
         {orgs.isPending ? <p className="text-ink-soft">Loading…</p> : (
-          <ul className="divide-y divide-solder">
+          <ul className="divide-y-[1.5px] divide-dotted divide-obsidian/40">
             {(orgs.data ?? []).map((o) => (
               <li key={o.org_id} className="py-3">
-                <p className="font-medium">{o.org_name} <span className="text-sm font-normal text-ink-soft">{o.org_type.toLowerCase()}</span></p>
+                <p className="">{o.org_name} <span className="text-sm font-normal text-ink-soft">{o.org_type.toLowerCase()}</span></p>
                 <ul className="mt-1 text-sm text-ink-soft">{o.facilities.map((f) => <li key={f.facility_id}>{f.facility_name} · {f.pincode}</li>)}</ul>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <input aria-label={`New facility name for ${o.org_name}`} placeholder="Facility name" value={fac[o.org_id]?.name ?? ''} className={`${inputClass} w-56`}
@@ -156,10 +156,10 @@ function Users() {
         {actors.isPending ? <p className="text-ink-soft">Loading…</p> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Name</th><th className="font-medium">Role</th><th className="font-medium">Email</th><th className="font-medium">Facility</th><th /></tr></thead>
+              <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Name</th><th className="">Role</th><th className="">Email</th><th className="">Facility</th><th /></tr></thead>
               <tbody>
                 {(actors.data ?? []).map((a) => (
-                  <tr key={a.actor_id} className={`border-t border-solder ${a.is_active ? '' : 'text-ink-soft'}`}>
+                  <tr key={a.actor_id} className={`border-t-[1.5px] border-dotted border-obsidian/40 ${a.is_active ? '' : 'text-ink-soft'}`}>
                     <td className="py-2">{a.full_name}</td><td>{ROLE_LABELS[a.role]}</td><td>{a.email}</td><td>{a.facility_name}</td>
                     <td className="text-right"><Button variant="quiet" onClick={() => void setActive(a, !a.is_active)}>{a.is_active ? 'Deactivate' : 'Reactivate'}</Button></td>
                   </tr>

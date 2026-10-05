@@ -3,6 +3,27 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { ApiException } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME } from '../auth/roles';
+import { Mark } from '../components/AppShell';
+import { Button, Field, inputClass } from '../components/ui';
+
+/** Hero halftone: a dot grid whose dots shrink from the top-right corner (Ember) toward the bottom-left (Plasma Violet). */
+function Halftone() {
+  const dots: React.ReactNode[] = [];
+  const cols = 26;
+  const rows = 34;
+  for (let r = 0; r < rows; r += 1) {
+    for (let c = 0; c < cols; c += 1) {
+      const d = Math.hypot((cols - 1 - c) / cols, r / rows);           // distance from the top-right corner
+      const size = Math.max(0.6, 7.2 * Math.max(0, 1.05 - d * 1.15));
+      if (size > 0.7) dots.push(<circle key={`${r}-${c}`} cx={c * 16 + 8} cy={r * 16 + 8} r={size} />);
+    }
+  }
+  return (
+    <svg aria-hidden className="absolute inset-0 size-full" viewBox={`0 0 ${cols * 16} ${rows * 16}`} preserveAspectRatio="xMidYMid slice" fill="#fc5000">
+      {dots}
+    </svg>
+  );
+}
 
 export default function Login() {
   const { session, ready, signIn } = useAuth();
@@ -31,52 +52,40 @@ export default function Login() {
   }
 
   return (
-    <main className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]">
-      <section aria-hidden className="relative hidden overflow-hidden bg-trace-deep text-bench lg:block">
-        <svg className="absolute inset-0 size-full" viewBox="0 0 600 800" preserveAspectRatio="xMidYMid slice" fill="none">
-          <g stroke="#2f8f7c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" opacity=".55">
-            <path d="M40 120h180l40 40h160l40-40h100" />
-            <path d="M40 220h120l60 60h220" />
-            <path d="M120 340h140l50-50h190" />
-            <path d="M40 460h260l60 60h200" />
-            <path d="M200 560h120l40 40h200" />
-            <path d="M40 680h200l50-50h270" />
-          </g>
-          <g fill="#093d34" stroke="#e0a526" strokeWidth="2.5">
-            <circle cx="220" cy="120" r="7" /><circle cx="460" cy="160" r="7" /><circle cx="220" cy="280" r="7" />
-            <circle cx="310" cy="290" r="7" /><circle cx="360" cy="520" r="7" /><circle cx="240" cy="680" r="7" />
-          </g>
-        </svg>
-        <div className="relative flex h-full flex-col justify-end gap-4 p-14">
-          <h1 className="max-w-[16ch] text-5xl font-semibold leading-[1.05] tracking-tight">Every part keeps its history.</h1>
-          <p className="max-w-[44ch] text-lg text-bench/80">
-            Passports for devices, boards, batteries and chips — from the first scan to the recycling certificate.
-          </p>
+    <main className="mx-auto grid min-h-dvh max-w-[1280px] gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <section aria-hidden className="relative hidden min-h-[640px] overflow-hidden rounded-[40px] bg-plasma-violet lg:block">
+        <Halftone />
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-plasma-violet via-plasma-violet/85 to-transparent p-12 pt-40">
+          <h1 className="font-display text-[clamp(4.5rem,8vw,7.5rem)] leading-[.94] tracking-[.02em] text-chalk">
+            Every part keeps its history
+          </h1>
         </div>
       </section>
 
-      <section className="flex items-center justify-center p-6 sm:p-12">
-        <form onSubmit={(e) => void submit(e)} className="w-full max-w-sm">
-          <h2 className="text-3xl font-semibold tracking-tight lg:hidden">ReCircuit</h2>
-          <p className="mt-1 text-ink-soft lg:hidden">Every part keeps its history.</p>
-          <h2 className="mt-8 text-2xl font-semibold tracking-tight lg:mt-0">Sign in</h2>
+      <section className="flex flex-col justify-between gap-12 rounded-[40px] bg-limestone p-8 sm:p-12">
+        <div className="flex items-center gap-2.5">
+          <Mark className="size-10" />
+          <span className="font-display text-3xl tracking-wide">ReCircuit</span>
+        </div>
+        <form onSubmit={(e) => void submit(e)} className="w-full">
+          <h1 className="h-page lg:hidden">Every part keeps its history</h1>
+          <h2 className="h-page mt-8 lg:mt-0">Sign in</h2>
+          <p className="mt-3 max-w-[40ch] text-ink-soft">Passports for devices, boards, batteries and chips, from the first scan to the recycling certificate.</p>
 
-          <label className="mt-6 block text-sm font-medium" htmlFor="email">Email</label>
-          <input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)}
-                 className="mt-1 w-full rounded-md border border-solder bg-tray px-3 py-2.5 text-base" />
+          <div className="mt-8 space-y-4">
+            <Field label="Email" htmlFor="email">
+              <input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} />
+            </Field>
+            <Field label="Password" htmlFor="password">
+              <input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+            </Field>
+          </div>
 
-          <label className="mt-4 block text-sm font-medium" htmlFor="password">Password</label>
-          <input id="password" type="password" autoComplete="current-password" required value={password}
-                 onChange={(e) => setPassword(e.target.value)}
-                 className="mt-1 w-full rounded-md border border-solder bg-tray px-3 py-2.5 text-base" />
+          {problem && <p role="alert" className="mt-5 rounded-[20px] border-[1.5px] border-fault bg-chalk px-4 py-3 text-sm text-fault">{problem}</p>}
 
-          {problem && <p role="alert" className="mt-4 rounded-md border border-fault bg-white px-3 py-2 text-sm text-fault">{problem}</p>}
-
-          <button type="submit" disabled={busy}
-                  className="mt-6 w-full rounded-md bg-trace px-4 py-3 font-medium text-white hover:bg-trace-deep disabled:opacity-60">
-            {busy ? 'Signing in…' : 'Sign in'}
-          </button>
+          <Button type="submit" disabled={busy} className="mt-8 w-full">{busy ? 'Signing in…' : 'Sign in'}</Button>
         </form>
+        <p className="text-xs text-ink-soft">Public passports open without signing in: scan the QR code on any part.</p>
       </section>
     </main>
   );

@@ -21,7 +21,7 @@ export default function CollectorPage() {
   const facilityId = facility ?? me.data?.facilities[0]?.facility_id ?? 0;
   return (
     <AppShell>
-      <h1 className="text-2xl font-semibold tracking-tight">Collector workspace</h1>
+      <h1 className="h-page">Collector workspace</h1>
       {me.data && <div className="mt-3"><FacilityField me={me.data} value={facilityId} onChange={setFacility} /></div>}
       <div className="mt-5"><Tabs label="Collector tasks" tabs={TABS} active={tab} onChange={setTab} /></div>
       <div className="mt-6 space-y-6">
@@ -54,7 +54,7 @@ function Intake({ facilityId }: { facilityId: number }) {
         <UnitLookup label="Passport" onFound={(p) => { setUnit(p); setUnknownUid(null); setDone(null); }}
                     onUnknown={(uid) => { setUnknownUid(uid); setUnit(null); }} />
         {unit && <Button className="mt-4" onClick={() => void collect()}>Mark as collected</Button>}
-        {done && <p role="status" className="mt-4 text-trace">{done}</p>}
+        {done && <p role="status" className="mt-4 text-obsidian">{done}</p>}
       </Panel>
       {unknownUid && <RegisterUnit facilityId={facilityId} onDone={(msg) => { setUnknownUid(null); setDone(msg); }} />}
     </>
@@ -131,7 +131,7 @@ function Dismantle({ facilityId }: { facilityId: number }) {
         <Button variant="quiet" onClick={() => setParts((all) => [...all, { key: Date.now(), modelId: '', serial: '' }])}>Add a part</Button>
       </div>
       <Button className="mt-5" disabled={!ready} onClick={() => void submit()}>Dismantle device</Button>
-      {result && <p role="status" className="mt-4 text-trace">{result}</p>}
+      {result && <p role="status" className="mt-4 text-obsidian">{result}</p>}
     </Panel>
   );
 }
@@ -167,10 +167,10 @@ function Manifests({ me }: { me: Me }) {
     <>
       <Panel title="Open manifests">
         {open.length === 0 ? <p className="text-ink-soft">Nothing is waiting to be received.</p> : (
-          <ul className="divide-y divide-solder">
+          <ul className="divide-y-[1.5px] divide-dotted divide-obsidian/40">
             {open.map((t) => (
               <li key={t.transfer_id} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
-                <Link to={`/manifest/${t.transfer_id}`} className="font-medium text-trace underline underline-offset-2">{t.manifest_no}</Link>
+                <Link to={`/manifest/${t.transfer_id}`} className=" text-obsidian underline decoration-ember decoration-2 underline-offset-4">{t.manifest_no}</Link>
                 <span className="text-sm text-ink-soft">to {t.to_org} · {t.items.length} unit{t.items.length === 1 ? '' : 's'}</span>
               </li>
             ))}
@@ -192,12 +192,12 @@ function Manifests({ me }: { me: Me }) {
         </div>
         <div className="mt-5"><UnitLookup label="Add a unit by scanning it" onFound={add} /></div>
         {items.length > 0 && (
-          <ul className="mt-4 divide-y divide-solder rounded-md border border-solder bg-white">
+          <ul className="mt-4 divide-y-[1.5px] divide-dotted divide-obsidian/40 rounded-[24px] bg-chalk">
             {items.map((i) => (
               <li key={i.unit_id} className="flex flex-wrap items-center justify-between gap-2 p-2">
                 <span>{i.label}</span>
                 <span className="flex items-center gap-2">
-                  <select aria-label={`Condition of ${i.label}`} value={i.condition} className="rounded-md border border-solder px-2 py-1"
+                  <select aria-label={`Condition of ${i.label}`} value={i.condition} className="rounded-full border-[1.5px] border-obsidian bg-white px-3 py-1"
                           onChange={(e) => setItems((all) => all.map((x) => (x.unit_id === i.unit_id ? { ...x, condition: e.target.value as Condition } : x)))}>
                     <option value="WORKING">Working</option><option value="FAULTY">Faulty</option><option value="SCRAP">Scrap</option>
                   </select>

@@ -5,6 +5,7 @@ import type { Role, UnitPassport } from '../../api/types';
 import { AppShell } from '../../components/AppShell';
 import { EventBadge } from '../../components/EventBadge';
 import { PartTree } from '../../components/PartTree';
+import { Tabs } from '../../components/ui';
 import { Timeline } from '../../components/Timeline';
 import { useAuth } from '../../auth/AuthContext';
 import { resolvePassportUid, useEvents, usePassport, useTransfers, useTree, useUnitCertificates } from './queries';
@@ -35,17 +36,8 @@ export default function PassportPage() {
       {passport && (
         <>
           <Header passport={passport} />
-          <div role="tablist" aria-label="Passport sections" className="mt-6 flex gap-1 overflow-x-auto border-b border-solder">
-            {TABS.map((t) => (
-              <button key={t} role="tab" id={`tab-${t}`} aria-selected={tab === t} aria-controls="tab-panel" type="button"
-                      onClick={() => setTab(t)}
-                      className={`whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium ${
-                        tab === t ? 'border-trace text-trace' : 'border-transparent text-ink-soft hover:text-ink'}`}>
-                {t}
-              </button>
-            ))}
-          </div>
-          <div role="tabpanel" id="tab-panel" aria-labelledby={`tab-${tab}`} className="pt-6">
+          <div className="mt-8"><Tabs label="Passport sections" tabs={TABS} active={tab} onChange={setTab} /></div>
+          <div role="tabpanel" className="pt-8">
             {tab === 'Overview' && <Overview passport={passport} />}
             {tab === 'Parts tree' && <PartsTab passport={passport} />}
             {tab === 'Timeline' && <TimelineTab unitId={passport.unit_id} />}
@@ -74,19 +66,19 @@ function QrImage({ unitId }: { unitId: number }) {
       if (url) URL.revokeObjectURL(url);
     };
   }, [unitId]);
-  return src ? <img src={src} alt="QR code for this passport" className="size-28 rounded-sm border border-solder bg-white p-1" /> : <div className="size-28" />;
+  return src ? <img src={src} alt="QR code for this passport" className="size-32 rounded-[20px] bg-chalk p-2" /> : <div className="size-28" />;
 }
 
 function Header({ passport }: { passport: UnitPassport }) {
   return (
-    <section className="flex flex-wrap items-start justify-between gap-6 rounded-md border border-solder bg-tray p-5">
+    <section className="flex flex-wrap items-start justify-between gap-6 rounded-[40px] bg-limestone p-8">
       <div className="min-w-0">
         <p className="text-sm text-ink-soft">{passport.model.manufacturer}</p>
-        <h1 className="text-3xl font-semibold tracking-tight">{passport.model.model_number}</h1>
+        <h1 className="h-page">{passport.model.model_number}</h1>
         <p className="mt-1 text-ink-soft">{passport.model.category.toLowerCase()} · serial {passport.serial_no}</p>
         <div className="mt-3 flex flex-wrap items-center gap-3">
           {passport.current_state ? <EventBadge type={passport.current_state} /> : <span className="text-sm text-ink-soft">No events yet</span>}
-          <span className={`rounded-sm px-2 py-0.5 text-sm font-medium ${passport.chain_verified ? 'bg-[#d9eee2] text-[#175c37]' : 'bg-[#f2dada] text-fault'}`}>
+          <span className={`rounded-full px-3 py-1 text-sm ${passport.chain_verified ? 'bg-sulfur text-obsidian' : 'bg-obsidian text-chalk'}`}>
             {passport.chain_verified ? 'History verified' : 'History does not verify'}
           </span>
         </div>
@@ -104,7 +96,7 @@ function Overview({ passport }: { passport: UnitPassport }) {
     ['In this state since', passport.state_since ? dateTimeFmt.format(new Date(passport.state_since)) : '—'],
     ['Held by', passport.current_holder?.org_name ?? 'Not known yet'],
     ['Installed in', passport.current_parent
-      ? <button type="button" className="text-trace underline underline-offset-2"
+      ? <button type="button" className="text-obsidian underline decoration-ember decoration-2 underline-offset-4"
                 onClick={() => navigate(`/unit/${passport.current_parent?.passport_uid ?? ''}`)}>
           {passport.current_parent.model_number}
         </button>
@@ -119,15 +111,15 @@ function Overview({ passport }: { passport: UnitPassport }) {
         ))}
       </dl>
       <div>
-        <h2 className="text-lg font-semibold">Materials</h2>
+        <h2 className="h-section">Materials</h2>
         {passport.model.materials.length === 0
           ? <p className="mt-2 text-ink-soft">No material composition has been recorded for this model.</p>
           : (
             <table className="mt-2 w-full text-sm">
-              <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Material</th><th className="py-1 text-right font-medium">Mass (mg)</th></tr></thead>
+              <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Material</th><th className="py-1 text-right ">Mass (mg)</th></tr></thead>
               <tbody>
                 {passport.model.materials.map((m) => (
-                  <tr key={m.material_name} className="border-t border-solder">
+                  <tr key={m.material_name} className="border-t-[1.5px] border-dotted border-obsidian/40">
                     <td className="py-1.5">{m.material_name}{m.is_critical && <span className="ml-2 text-xs text-ink-soft">critical</span>}</td>
                     <td className="py-1.5 text-right tabular-nums">{m.mass_mg.toLocaleString('en-IN')}</td>
                   </tr>
@@ -152,11 +144,11 @@ function PartsTab({ passport }: { passport: UnitPassport }) {
   }
   return (
     <div>
-      <label className="text-sm font-medium" htmlFor="as-of">Show the parts inside on</label>
+      <label className="text-sm " htmlFor="as-of">Show the parts inside on</label>
       <div className="mt-1 flex flex-wrap items-center gap-2">
         <input id="as-of" type="datetime-local" value={local} max={toLocalInput(new Date())} onChange={(e) => e.target.value && setLocal(e.target.value)}
-               className="rounded-md border border-solder bg-white px-3 py-2" />
-        <button type="button" onClick={() => setLocal(toLocalInput(new Date()))} className="rounded-md border border-solder px-3 py-2 text-sm">Now</button>
+               className="rounded-full border-[1.5px] border-obsidian bg-white px-5 py-2.5" />
+        <button type="button" onClick={() => setLocal(toLocalInput(new Date()))} className="rounded-full border-[1.5px] border-obsidian px-5 py-2.5 text-sm">Now</button>
       </div>
       <div className="mt-6">
         {selected.isPending ? <p className="text-ink-soft">Loading parts…</p>
@@ -184,10 +176,10 @@ function TestsTab({ unitId }: { unitId: number }) {
   if (rows.length === 0) return <p className="text-ink-soft">No diagnostic tests have been recorded for this unit.</p>;
   return (
     <table className="w-full text-sm">
-      <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Tested</th><th className="font-medium">Test</th><th className="font-medium">Result</th><th className="text-right font-medium">Measured</th><th className="text-right font-medium">Health</th></tr></thead>
+      <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Tested</th><th className="">Test</th><th className="">Result</th><th className="text-right ">Measured</th><th className="text-right ">Health</th></tr></thead>
       <tbody>
         {rows.map((r, i) => (
-          <tr key={i} className="border-t border-solder">
+          <tr key={i} className="border-t-[1.5px] border-dotted border-obsidian/40">
             <td className="py-1.5">{dateTimeFmt.format(new Date(r.at))}</td><td>{r.test_type}</td><td>{r.result.toLowerCase()}</td>
             <td className="text-right tabular-nums">{r.measured_value ?? '—'}</td><td className="text-right tabular-nums">{r.health_score ?? '—'}</td>
           </tr>
@@ -208,14 +200,14 @@ function CustodyTab({ unitId }: { unitId: number }) {
   return (
     <ul className="space-y-3">
       {mine.map((t) => (
-        <li key={t.transfer_id} className="rounded-md border border-solder bg-tray p-3">
-          <p className="font-medium">{t.manifest_no}</p>
+        <li key={t.transfer_id} className="rounded-[24px] bg-limestone p-4">
+          <p className="">{t.manifest_no}</p>
           <p className="text-sm">{t.from_org} to {t.to_org}</p>
           <p className="text-sm text-ink-soft">
             Shipped {dateTimeFmt.format(new Date(t.shipped_at))} · {t.received_at ? `received ${dateTimeFmt.format(new Date(t.received_at))}` : 'not yet received'}
           </p>
           {t.discrepancies.filter((d) => d.unit_id === unitId).map((d) => (
-            <p key={d.kind} className="mt-1 text-sm font-medium text-fault">Flagged {d.kind.toLowerCase()} at receipt</p>
+            <p key={d.kind} className="mt-1 text-sm  text-fault">Flagged {d.kind.toLowerCase()} at receipt</p>
           ))}
         </li>
       ))}
@@ -233,8 +225,8 @@ function CertificatesTab({ unitId }: { unitId: number }) {
   return (
     <ul className="space-y-3">
       {data.map((c) => (
-        <li key={c.cert_id} className="rounded-md border border-solder bg-tray p-3">
-          <p className="font-medium">{c.cert_no}</p>
+        <li key={c.cert_id} className="rounded-[24px] bg-limestone p-4">
+          <p className="">{c.cert_no}</p>
           <p className="text-sm">{c.recycler}{c.producer && <> to {c.producer}</>} · {c.category} · {c.financial_year}</p>
           <p className="text-sm text-ink-soft">{c.claimed_kg} kg claimed · {c.backed_kg} kg backed by {c.unit_count} units</p>
         </li>

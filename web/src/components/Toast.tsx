@@ -35,8 +35,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div aria-live="polite" className="fixed inset-x-0 bottom-0 z-50 mx-auto flex max-w-md flex-col gap-2 p-4">
         {items.map((t) => (
           <div key={t.id} role={t.tone === 'error' ? 'alert' : 'status'}
-               className={`flex items-start justify-between gap-3 rounded-md border px-4 py-3 shadow-lg ${
-                 t.tone === 'error' ? 'border-fault bg-white text-fault' : 'border-solder bg-tray text-ink'}`}>
+               className={`flex items-start justify-between gap-3 rounded-[24px] border-[1.5px] px-5 py-3 ${
+                 t.tone === 'error' ? 'border-fault bg-chalk text-fault' : 'border-obsidian bg-limestone text-obsidian'}`}>
             <span>{t.message}</span>
             <button type="button" onClick={() => dismiss(t.id)} aria-label="Dismiss" className="text-ink-soft">✕</button>
           </div>

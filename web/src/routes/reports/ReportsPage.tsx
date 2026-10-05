@@ -71,12 +71,12 @@ export default function ReportsPage() {
 
   return (
     <AppShell wide>
-      <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
+      <h1 className="h-page">Reports</h1>
       <div className="mt-6 grid gap-6 lg:grid-cols-[18rem_1fr]">
         <nav aria-label="Reports" className="space-y-1">
           {available.map((r) => (
             <button key={r.name} type="button" onClick={() => { setName(r.name); setValues({}); setRun(null); }}
-                    className={`block w-full rounded-md px-3 py-2 text-left ${r.name === def?.name ? 'bg-trace text-white' : 'hover:bg-tray'}`}>{r.title}</button>
+                    className={`block w-full rounded-full px-5 py-2.5 text-left ${r.name === def?.name ? 'bg-ember text-obsidian' : 'hover:bg-tray'}`}>{r.title}</button>
           ))}
         </nav>
         {def && (
@@ -105,10 +105,10 @@ export default function ReportsPage() {
                     <div className="overflow-x-auto">
                       <p className="mb-2 text-sm text-ink-soft">{rows.length} row{rows.length === 1 ? '' : 's'}</p>
                       <table className="w-full text-sm">
-                        <thead><tr className="text-left text-ink-soft">{columns.map((c) => <th key={c} className="whitespace-nowrap py-1 pr-4 font-medium">{c}</th>)}</tr></thead>
+                        <thead><tr className="text-left text-ink-soft">{columns.map((c) => <th key={c} className="whitespace-nowrap py-1 pr-4 ">{c}</th>)}</tr></thead>
                         <tbody>
                           {rows.slice(0, 500).map((r, i) => (
-                            <tr key={i} className="border-t border-solder">{columns.map((c) => <td key={c} className="py-1.5 pr-4 align-top">{show(r[c])}</td>)}</tr>
+                            <tr key={i} className="border-t-[1.5px] border-dotted border-obsidian/40">{columns.map((c) => <td key={c} className="py-1.5 pr-4 align-top">{show(r[c])}</td>)}</tr>
                           ))}
                         </tbody>
                       </table>

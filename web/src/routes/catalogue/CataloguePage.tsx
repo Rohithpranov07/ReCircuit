@@ -17,7 +17,7 @@ export default function CataloguePage() {
   const mine = (models.data ?? []).filter((m) => m.manufacturer_id === me.data?.org_id);
   return (
     <AppShell wide>
-      <h1 className="text-2xl font-semibold tracking-tight">Catalogue</h1>
+      <h1 className="h-page">Catalogue</h1>
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <ModelForm />
         <MaterialsEditor models={mine} />
@@ -26,10 +26,10 @@ export default function CataloguePage() {
         <Panel title="Your models">
           {mine.length === 0 ? <p className="text-ink-soft">You have not registered any models yet.</p> : (
             <table className="w-full text-sm">
-              <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Model</th><th className="font-medium">Category</th><th className="text-right font-medium">Mass (g)</th><th className="font-medium">Specification</th></tr></thead>
+              <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Model</th><th className="">Category</th><th className="text-right ">Mass (g)</th><th className="">Specification</th></tr></thead>
               <tbody>
                 {mine.map((m) => (
-                  <tr key={m.model_id} className="border-t border-solder align-top">
+                  <tr key={m.model_id} className="border-t-[1.5px] border-dotted border-obsidian/40 align-top">
                     <td className="py-2">{m.model_number}</td><td>{m.category.toLowerCase()}</td><td className="text-right tabular-nums">{m.mass_g}</td>
                     <td className="text-ink-soft">{Object.entries(m.spec).map(([k, v]) => `${k}: ${String(v)}`).join(', ') || '—'}</td>
                   </tr>
@@ -76,7 +76,7 @@ function ModelForm() {
       </div>
       {SPEC_KEYS[category].length > 0 && (
         <fieldset className="mt-4">
-          <legend className="text-sm font-medium">Specification</legend>
+          <legend className="text-sm ">Specification</legend>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             {SPEC_KEYS[category].map((k) => (
               <Field key={k} label={k} htmlFor={`spec-${k}`}>
@@ -113,13 +113,13 @@ function MaterialsEditor({ models }: { models: ModelRow[] }) {
       </Field>
       {model && (
         <table className="mt-4 w-full text-sm">
-          <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">Material</th><th className="text-right font-medium">Mass (mg)</th></tr></thead>
+          <thead><tr className="text-left text-ink-soft"><th className="py-1 ">Material</th><th className="text-right ">Mass (mg)</th></tr></thead>
           <tbody>
             {(materials.data ?? []).map((m) => (
-              <tr key={m.material_id} className="border-t border-solder">
+              <tr key={m.material_id} className="border-t-[1.5px] border-dotted border-obsidian/40">
                 <td className="py-1.5">{m.material_name}{m.is_critical && <span className="ml-2 text-xs text-ink-soft">critical</span>}{m.is_hazardous && <span className="ml-2 text-xs text-fault">hazardous</span>}</td>
                 <td className="text-right"><input aria-label={`${m.material_name} mass in mg`} inputMode="decimal" value={masses[m.material_id] ?? ''}
-                  onChange={(e) => setMasses((all) => ({ ...all, [m.material_id]: e.target.value }))} className="w-28 rounded-md border border-solder px-2 py-1 text-right" /></td>
+                  onChange={(e) => setMasses((all) => ({ ...all, [m.material_id]: e.target.value }))} className="w-28 rounded-full border-[1.5px] border-obsidian bg-white px-3 py-1 text-right" /></td>
               </tr>
             ))}
           </tbody>

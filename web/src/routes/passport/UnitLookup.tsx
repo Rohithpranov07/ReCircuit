@@ -50,7 +50,7 @@ export function UnitLookup({ label, onFound, onUnknown }: Props) {
 
   return (
     <div>
-      <label htmlFor={`lookup-${label}`} className="block text-sm font-medium">{label}</label>
+      <label htmlFor={`lookup-${label}`} className="block text-sm ">{label}</label>
       <form onSubmit={submit} className="mt-1 flex flex-col gap-2 sm:flex-row">
         <input id={`lookup-${label}`} value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste a passport ID or link"
                className={`${inputClass} min-w-0 flex-1`} />
@@ -64,9 +64,9 @@ export function UnitLookup({ label, onFound, onUnknown }: Props) {
       )}
       {problem && <p role="alert" className="mt-2 text-sm text-fault">{problem}</p>}
       {found && (
-        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-md border border-solder bg-white p-3" data-testid="found-unit">
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-[24px] bg-chalk p-4" data-testid="found-unit">
           <div className="min-w-0">
-            <p className="font-medium">{found.model.model_number} <span className="text-sm font-normal text-ink-soft">· {found.serial_no}</span></p>
+            <p className="">{found.model.model_number} <span className="text-sm font-normal text-ink-soft">· {found.serial_no}</span></p>
             <p className="text-sm text-ink-soft">{found.model.category.toLowerCase()}{found.current_parent && ` · inside ${found.current_parent.model_number}`}</p>
           </div>
           {found.current_state ? <EventBadge type={found.current_state} /> : <span className="text-sm text-ink-soft">No events yet</span>}

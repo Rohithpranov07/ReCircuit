@@ -14,7 +14,7 @@ export default function AuditorPage() {
   const [tab, setTab] = useState<Tab>('Tamper check');
   return (
     <AppShell wide>
-      <h1 className="text-2xl font-semibold tracking-tight">Auditor console</h1>
+      <h1 className="h-page">Auditor console</h1>
       <div className="mt-5"><Tabs label="Audit checks" tabs={TABS} active={tab} onChange={setTab} /></div>
       <div className="mt-6">
         {tab === 'Tamper check' && <Tamper />}
@@ -49,12 +49,12 @@ function Tamper() {
         <Button variant="quiet" disabled={busy} onClick={() => void checkAll()}>{busy ? 'Checking every unit…' : 'Check every unit'}</Button>
       </div>
       {one && (
-        <p role="status" className={`mt-5 rounded-md border p-3 ${one.verified ? 'border-trace bg-white text-trace' : 'border-fault bg-white text-fault'}`}>
+        <p role="status" className={`mt-5 rounded-[24px] p-5 ${one.verified ? 'bg-sulfur text-obsidian' : 'bg-obsidian text-chalk'}`}>
           {one.verified ? `Unit ${one.unit_id}: every event matches its hash.` : `Unit ${one.unit_id}: the history was changed. The first broken link is event ${String(one.first_broken_event_id)}.`}
         </p>
       )}
       {all && (
-        <div role="status" className={`mt-5 rounded-md border p-3 ${all.verified ? 'border-trace bg-white text-trace' : 'border-fault bg-white text-fault'}`}>
+        <div role="status" className={`mt-5 rounded-[24px] p-5 ${all.verified ? 'bg-sulfur text-obsidian' : 'bg-obsidian text-chalk'}`}>
           <p>{all.verified ? `All ${all.checked} units verify.` : `${all.broken.length} of ${all.checked} units fail the check.`}</p>
           {all.broken.length > 0 && (
             <ul className="mt-2 text-sm">{all.broken.map((b) => <li key={b.unit_id}>Unit {b.unit_id}: first broken link is event {b.first_broken_event_id}</li>)}</ul>
@@ -71,8 +71,8 @@ function Table({ rows, empty }: { rows: ReportRow[]; empty: string }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
-        <thead><tr className="text-left text-ink-soft">{columns.map((c) => <th key={c} className="whitespace-nowrap py-1 pr-4 font-medium">{c}</th>)}</tr></thead>
-        <tbody>{rows.map((r, i) => <tr key={i} className="border-t border-solder">{columns.map((c) => <td key={c} className="py-1.5 pr-4">{String(r[c] ?? '')}</td>)}</tr>)}</tbody>
+        <thead><tr className="text-left text-ink-soft">{columns.map((c) => <th key={c} className="whitespace-nowrap py-1 pr-4 ">{c}</th>)}</tr></thead>
+        <tbody>{rows.map((r, i) => <tr key={i} className="border-t-[1.5px] border-dotted border-obsidian/40">{columns.map((c) => <td key={c} className="py-1.5 pr-4">{String(r[c] ?? '')}</td>)}</tr>)}</tbody>
       </table>
     </div>
   );
@@ -85,7 +85,7 @@ function Backing() {
     <Panel title="Certificate backing">
       {isPending ? <p className="text-ink-soft">Loading…</p> : (
         <>
-          <p className={`mb-3 font-medium ${short.length ? 'text-fault' : 'text-trace'}`}>
+          <p className={`mb-3  ${short.length ? 'text-fault' : 'text-obsidian'}`}>
             {short.length ? `${short.length} certificate${short.length === 1 ? '' : 's'} claim more than their units back.` : 'Every certificate is backed by at least the weight it claims.'}
           </p>
           <Table rows={data ?? []} empty="No certificates have been issued." />
@@ -111,10 +111,10 @@ function Log() {
       {isPending ? <p className="text-ink-soft">Loading…</p> : (data ?? []).length === 0 ? <p className="text-ink-soft">Nothing has been logged yet.</p> : (
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-ink-soft"><th className="py-1 font-medium">When</th><th className="font-medium">Who</th><th className="font-medium">Action</th><th className="font-medium">Record</th></tr></thead>
+            <thead><tr className="text-left text-ink-soft"><th className="py-1 ">When</th><th className="">Who</th><th className="">Action</th><th className="">Record</th></tr></thead>
             <tbody>
               {(data ?? []).map((l) => (
-                <tr key={l.log_id} className="border-t border-solder">
+                <tr key={l.log_id} className="border-t-[1.5px] border-dotted border-obsidian/40">
                   <td className="py-1.5 pr-4 whitespace-nowrap">{fmt.format(new Date(l.logged_at))}</td><td className="pr-4">{l.actor_name}</td>
                   <td className="pr-4">{l.action}</td><td>{l.entity} {l.entity_id}</td>
                 </tr>
