@@ -6,7 +6,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T0.2 Docker Compose with PostgreSQL 16 and role bootstrap
 - [x] T1.1 Migrations 001–003: extensions, identity, catalogue
 - [x] T1.2 Migration 004: unit and assembly graph (C1, C2)
-- [ ] T1.3 Migration 005: event ledger (C3–C6) and audit log
+- [x] T1.3 Migration 005: event ledger (C3–C6) and audit log
 - [ ] T1.4 Migrations 006–008: diagnostics, custody, EPR (C7–C10)
 - [ ] T1.5 Migration 009: assembly procedures from the TRD
 - [ ] T1.6 Migration 010: routines defined by contract (E5)
