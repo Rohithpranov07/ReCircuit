@@ -29,7 +29,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T5.2 Load and concurrency evidence
 - [x] T6.1 CI pipeline
 - [ ] T6.2 README and one-command setup
-- [ ] T6.3 Traceability matrix
+- [x] T6.3 Traceability matrix
 - [x] T6.4 Backup and restore drill
 - [ ] T6.5 Spec sync
 
@@ -62,3 +62,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - T5.2: k6 on the large profile: passport p95 11.9 ms (< 200), tree p95 7.9 ms (< 300), 0 failures; race script confirms NFR-3 (10/10 rounds: one 201, one 409 ASM_OVERLAP) and NFR-4 (one certificate of 20). Results appended to docs/plans/SUMMARY.md. The compose database now holds the large dataset; `make e2e` resets it to the small seed.
 - T6.1: CI (.github/workflows/ci.yml): migrations up, every down migration and up again, pgTAP, ruff and mypy, pytest (testcontainers), web build and lint, and the five browser flows on main. Green run, all four jobs: https://github.com/Rohithpranov07/ReCircuit/actions/runs/37350100800 (the first push failed on a lint rule in seed code and was fixed in the next commit).
 - T6.4: ops/backup.sh (pg_dump -Fc, listing check, retention), ops/restore_drill.sh and ops/RESTORE.md with the real drill output (row counts equal, 505 chains verify, UPDATE still refused with RC003, grants and the six RLS tables survived). Found and fixed erratum E8: pg_restore refreshes mv_material_recovery with an empty search_path, so fn_org_of_facility (migration 002) now reads public.facility. Point-in-time recovery is documented as a procedure and has not been rehearsed.
+- T6.3: docs/traceability.csv links all 86 requirements (67 P0) to objects, endpoints and tests; `python scripts/check_traceability.py` prints "P0 coverage 100%" and fails if a P0 row has no test, names a test that does not exist, or is not "pass"; it runs in CI. Building the matrix exposed gaps, closed here: FR-4.3 lookup by (model, serial) was missing (GET /units?model_id=&serial_no= plus a lookup form), FR-12.1 admin dashboard (GET /admin/dashboard and an Overview tab), and tests for FR-1.3, 2.1, 4.5, 6.1, 6.6, 8.2, 9.1, 11.3, NFR-7 and NFR-13 (db/tests/t11_requirements.sql, 174 pgTAP tests in total), FR-12.3 seed determinism (api/tests/test_seed.py), FR-3.5 model search, and NFR-11/14 (e2e/f6.spec.ts: 360 px width, keyboard-only sign-in). Still deferred: FR-1.7 password reset, FR-2.5 capacity warning, FR-7.4 health chart (all P2). Honest limits: the matrix shows that a test exists and is wired into CI, not each run's result; FR-5.6's "10 scripted scenarios" is covered by 6 dated cases.

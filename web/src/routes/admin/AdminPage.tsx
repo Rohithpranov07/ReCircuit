@@ -1,26 +1,50 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { api } from '../../api/client';
-import type { ActorRow, AdminOrgRow, OrgType, Role } from '../../api/types';
+import type { ActorRow, AdminOrgRow, Dashboard, OrgType, Role } from '../../api/types';
 import { ROLE_LABELS } from '../../auth/roles';
 import { AppShell } from '../../components/AppShell';
 import { useToast } from '../../components/Toast';
 import { Button, Field, Panel, Tabs, inputClass } from '../../components/ui';
 
-const TABS = ['Organisations', 'Users'] as const;
+const TABS = ['Overview', 'Organisations', 'Users'] as const;
 type Tab = (typeof TABS)[number];
 const ORG_TYPES: OrgType[] = ['PRODUCER', 'COLLECTOR', 'DISMANTLER', 'REFURBISHER', 'RECYCLER'];
 const ROLES = Object.keys(ROLE_LABELS) as Role[];
 
 /** S13: organisations, facilities, users and roles. */
 export default function AdminPage() {
-  const [tab, setTab] = useState<Tab>('Organisations');
+  const [tab, setTab] = useState<Tab>('Overview');
   return (
     <AppShell wide>
       <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
       <div className="mt-5"><Tabs label="Administration" tabs={TABS} active={tab} onChange={setTab} /></div>
-      <div className="mt-6 space-y-6">{tab === 'Organisations' ? <Organisations /> : <Users />}</div>
+      <div className="mt-6 space-y-6">{tab === 'Overview' ? <Overview /> : tab === 'Organisations' ? <Organisations /> : <Users />}</div>
     </AppShell>
+  );
+}
+
+function Overview() {
+  const { data, isPending } = useQuery({ queryKey: ['admin', 'dashboard'], queryFn: () => api<Dashboard>('/admin/dashboard') });
+  if (isPending || !data) return <p className="text-ink-soft">Loading…</p>;
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <Panel title="Units by state">
+        <table className="w-full text-sm">
+          <tbody>
+            {data.units_by_state.map((s) => (
+              <tr key={s.state} className="border-t border-solder first:border-0">
+                <td className="py-1.5">{s.state.toLowerCase()}</td><td className="text-right tabular-nums">{s.units.toLocaleString('en-IN')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Panel>
+      <div className="space-y-6">
+        <Panel title="Manifests not yet received"><p className="text-3xl font-semibold tabular-nums">{data.open_manifests}</p></Panel>
+        <Panel title={`Certificates issued in ${data.financial_year}`}><p className="text-3xl font-semibold tabular-nums">{data.certificates_this_year}</p></Panel>
+      </div>
+    </div>
   );
 }
 

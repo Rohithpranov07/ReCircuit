@@ -71,3 +71,27 @@ async def patch_actor(actor_id: int, body: ActorPatch, request: Request,
                       claims: Claims = Depends(ADMIN)) -> Response:
     await _db(request).run(claims, "sp_admin_set_actor_active", p_actor=actor_id, p_active=body.is_active)
     return Response(status_code=204)
+
+
+@router.get("/admin/dashboard")
+async def dashboard(request: Request, claims: Claims = Depends(ADMIN)) -> dict[str, Any]:
+    """FR-12.1: units by state, open manifests and certificates issued this financial year."""
+    async def work(conn: Any) -> dict[str, Any]:
+        cur = await conn.execute(
+            "SELECT COALESCE(current_state, 'NO EVENTS') AS state, count(*) AS units FROM v_unit_current "
+            "GROUP BY 1 ORDER BY 2 DESC, 1")
+        states = await cur.fetchall()
+        cur = await conn.execute("SELECT count(*) AS n FROM custody_transfer WHERE received_at IS NULL")
+        open_manifests = (await cur.fetchone())["n"]
+        cur = await conn.execute(
+            """WITH fy AS (SELECT (extract(year FROM now() - interval '3 months'))::int AS start_year)
+               SELECT start_year || '-' || lpad(((start_year + 1) % 100)::text, 2, '0') AS financial_year,
+                      (SELECT count(*) FROM epr_certificate c
+                        WHERE c.financial_year = start_year || '-' || lpad(((start_year + 1) % 100)::text, 2, '0')) AS certificates
+                 FROM fy""")
+        fy = await cur.fetchone()
+        return {"units_by_state": states, "open_manifests": open_manifests,
+                "financial_year": fy["financial_year"], "certificates_this_year": fy["certificates"]}
+
+    result: dict[str, Any] = await _db(request).transaction(claims, work)
+    return result

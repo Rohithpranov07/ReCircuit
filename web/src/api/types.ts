@@ -131,3 +131,8 @@ export interface AdminOrgRow {
   org_id: number; org_name: string; org_type: OrgType; cpcb_reg_no: string | null; gstin: string | null;
   facilities: { facility_id: number; facility_name: string; pincode: string; authorised_capacity_tpa: string | null }[];
 }
+
+export interface Dashboard {          // GET /admin/dashboard
+  units_by_state: { state: string; units: number }[];
+  open_manifests: number; financial_year: string; certificates_this_year: number;
+}

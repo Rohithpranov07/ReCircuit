@@ -74,6 +74,8 @@ jobs:
       - run: mypy --strict --config-file api/pyproject.toml seed
       - run: cd api && mypy --strict --config-file pyproject.toml app tests
       - run: cd api && pytest -q
+      - name: Traceability (every P0 requirement linked to an existing test)
+        run: python scripts/check_traceability.py
 
   web:
     name: Web (build, lint)

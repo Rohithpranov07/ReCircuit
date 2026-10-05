@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import io
 from collections.abc import AsyncIterator, Iterator
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -135,3 +136,18 @@ async def test_me_and_the_organisation_directory_for_staff(app: Any, http: httpx
     orgs = (await http.get("/api/v1/organizations", headers=tech)).json()
     assert {o["org_id"] for o in orgs} >= {world.org_p, world.org_t}
     assert (await http.post("/api/v1/organizations", headers=tech, json={"org_name": "X", "org_type": "RECYCLER"})).status_code == 403
+
+
+async def test_admin_dashboard_counts_match_the_tables(app: Any, http: httpx.AsyncClient, world: World, demo: Demo, pg: Pg) -> None:
+    dash = (await http.get("/api/v1/admin/dashboard", headers=auth(app, demo.admin))).json()
+    with psycopg.connect(pg.url("rc_owner")) as conn:
+        total_units = conn.execute("SELECT count(*) FROM unit").fetchone()
+        open_manifests = conn.execute("SELECT count(*) FROM custody_transfer WHERE received_at IS NULL").fetchone()
+    assert total_units is not None and open_manifests is not None
+    assert sum(s["units"] for s in dash["units_by_state"]) == total_units[0]
+    assert dash["open_manifests"] == open_manifests[0]
+    today = datetime.now(UTC)
+    start = today.year if today.month >= 4 else today.year - 1
+    assert dash["financial_year"] == f"{start}-{(start + 1) % 100:02d}"
+    assert dash["certificates_this_year"] >= 0
+    assert (await http.get("/api/v1/admin/dashboard", headers=auth(app, world.technician()))).status_code == 403

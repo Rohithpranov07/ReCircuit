@@ -1,6 +1,6 @@
 -- Requirement checks that the rule tests do not already cover (traceability matrix, T6.3). Rolls back at the end.
 BEGIN;
-SELECT plan(20);
+SELECT plan(22);
 \o /dev/null
 \ir ../fixtures/walkthrough.sql
 \o
@@ -30,6 +30,15 @@ SELECT is((SELECT count(DISTINCT event_type) FROM lifecycle_event WHERE event_ty
           'FR-6.1: the walkthrough records events of the allowed types');
 SELECT ok(EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid = 'lifecycle_event'::regclass AND contype = 'c'
                   AND pg_get_constraintdef(oid) LIKE '%MANUFACTURED%DISPOSED%'), 'FR-6.1: the event_type CHECK constraint lists the nine types');
+
+-- FR-6.6 a correction is a new event that points at the one it corrects; the original is untouched
+DO $$ DECLARE v_orig BIGINT := (SELECT event_id FROM lifecycle_event WHERE unit_id = current_setting('wt.board_lost')::BIGINT AND event_type = 'COLLECTED');
+BEGIN CALL sp_record_event(current_setting('wt.board_lost')::BIGINT, 'DIAGNOSED', '2026-09-27T09:00:00Z', current_setting('wt.fac_c')::INT, v_orig); END $$;
+SELECT is((SELECT corrects_event_id FROM lifecycle_event WHERE unit_id = current_setting('wt.board_lost')::BIGINT AND event_type = 'DIAGNOSED'),
+          (SELECT event_id FROM lifecycle_event WHERE unit_id = current_setting('wt.board_lost')::BIGINT AND event_type = 'COLLECTED'),
+          'FR-6.6: a correction event references the event it corrects');
+SELECT is((SELECT count(*) FROM lifecycle_event WHERE unit_id = current_setting('wt.board_lost')::BIGINT AND event_type = 'COLLECTED'), 1::BIGINT,
+          'FR-6.6: the original event is unchanged');
 
 -- FR-8.2 manifest mass and declared condition
 SELECT throws_ok(format($f$INSERT INTO custody_transfer (manifest_no, from_org_id, to_org_id, shipped_at, total_mass_kg) VALUES ('MF-T11',%s,%s,'2026-09-01T00:00:00Z',0)$f$,

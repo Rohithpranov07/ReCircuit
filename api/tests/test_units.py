@@ -66,6 +66,9 @@ async def test_flows_f1_and_f2(app: Any, http: httpx.AsyncClient, cast: Cast) ->
     bad = await http.post("/api/v1/models", headers=prod, json={
         "model_number": "F-BAD", "category": "BATTERY", "mass_g": 250, "spec": {"bogus": 1}})
     assert (bad.status_code, bad.json()["error"]["code"]) == (400, "SPEC_KEY_UNKNOWN")
+    found = (await http.get("/api/v1/models", headers=tech, params={"category": "BATTERY", "q": "F-BA", "manufacturer": "Producer"})).json()
+    assert [m["model_number"] for m in found] == ["F-BAT"]
+    assert (await http.get("/api/v1/models", headers=tech, params={"q": "no-such-model"})).json() == []
     materials = (await http.get("/api/v1/materials", headers=tech)).json()
     assert cast.material_id in [m["material_id"] for m in materials]
     put = await http.put(f"/api/v1/models/{battery_model}/materials", headers=prod,

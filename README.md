@@ -103,7 +103,7 @@ auditor screens have something to find.
 
 | Suite | Command | What it proves |
 | --- | --- | --- |
-| Database (pgTAP) | `make db-test` | Rules C1–C10, hash chain and tamper detection, the TRD walkthrough, roles and row-level security (152 tests) |
+| Database (pgTAP) | `make db-test` | Rules C1–C10, hash chain and tamper detection, the TRD walkthrough, roles and row-level security (174 tests) |
 | API | `cd api && pytest` | Pipeline, errors, auth, every router, the 20-way certificate race (needs Docker and dbmate) |
 | Types and lint | `cd api && ruff check . && mypy --strict app tests` · `cd web && npm run build && npm run lint` | |
 | Browser flows F1–F5 | `make e2e` | Collect/dismantle/test, reinstall, receive/recycle/certify, tamper check, public passport. **Deletes the local database volume.** |

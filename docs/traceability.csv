@@ -1,0 +1,87 @@
+requirement_id,priority,db_object_or_endpoint,test_ids,status
+FR-1.1,P0,POST /auth/login; fn_auth_lookup,pytest:api/tests/test_auth.py::test_wrong_password_and_unknown_email_give_the_same_401;pytest:api/tests/test_auth.py::test_account_locks_after_five_failures_and_unlocks_later,pass
+FR-1.2,P0,"POST /auth/login, /auth/refresh",pytest:api/tests/test_auth.py::test_good_login_issues_access_token_and_httponly_refresh_cookie;pytest:api/tests/test_auth.py::test_refresh_token_is_single_use_and_rotates,pass
+FR-1.3,P0,"actor.role CHECK, actor.facility_id NOT NULL",pgtap:db/tests/t11_requirements.sql#FR-1.3: an actor role outside;pgtap:db/tests/t11_requirements.sql#FR-1.3: an actor must belong,pass
+FR-1.4,P0,"roles rc_*, grants, SET LOCAL ROLE",pgtap:db/tests/t10_roles.sql#rc_technician: INSERT INTO epr_certificate is permission denied;pytest:api/tests/test_pipeline.py::test_role_is_enforced_by_the_database,pass
+FR-1.5,P0,row-level security policies,pgtap:db/tests/t10_roles.sql#RLS: a collector sees 0 of another;pgtap:db/tests/t10_roles.sql#RLS through a staff view;pytest:api/tests/test_epr.py::test_custody_manifest_flow,pass
+FR-1.6,P0,actor.password_hash (bcrypt),pytest:api/tests/test_reports.py::test_admin_creates_a_working_account_and_deactivates_it;pgtap:db/tests/t10_roles.sql#rc_admin cannot read actor.password_hash,pass
+FR-1.7,P2,—,,deferred (P2)
+FR-2.1,P0,sp_admin_create_org; POST /organizations,pgtap:db/tests/t11_requirements.sql#FR-2.1: a duplicate GSTIN is refused;pgtap:db/tests/t09_contract_routines.sql#sp_admin_create_org returns an org id;pytest:api/tests/test_reports.py::test_admin_creates_a_working_account_and_deactivates_it,pass
+FR-2.2,P0,facility.pincode CHECK; sp_admin_create_facility,pgtap:db/tests/t09_contract_routines.sql#sp_admin_create_facility refuses a bad pincode,pass
+FR-2.3,P0,sp_admin_create_actor; POST /actors,pgtap:db/tests/t09_contract_routines.sql#sp_admin_create_actor refuses a duplicate email;pytest:api/tests/test_reports.py::test_admin_creates_a_working_account_and_deactivates_it,pass
+FR-2.4,P1,sp_admin_set_actor_active; PATCH /actors/{id},pytest:api/tests/test_auth.py::test_deactivated_actor_cannot_log_in_or_refresh;pgtap:db/tests/t09_contract_routines.sql#sp_admin_set_actor_active deactivates the actor,pass
+FR-2.5,P2,facility.authorised_capacity_tpa (stored; no 90% warning),,deferred (P2)
+FR-3.1,P0,sp_register_model; POST /models,pgtap:db/tests/t09_contract_routines.sql#sp_register_model returns a model id;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-3.2,P1,"part_model.spec JSONB, GIN index, fn_spec_keys",pgtap:db/tests/t09_contract_routines.sql#sp_register_model rejects an unknown spec key;pgtap:db/tests/t11_requirements.sql#NFR-7: the spec column has a GIN index,pass
+FR-3.3,P0,model_material; sp_set_materials; PUT /models/{id}/materials,pgtap:db/tests/t09_contract_routines.sql#sp_set_materials replaces the composition;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-3.4,P1,"material.is_critical, is_hazardous",pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-3.5,P1,GET /models?category=&manufacturer=&q=,pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-4.1,P0,sp_create_unit; POST /units,"pgtap:db/tests/t09_contract_routines.sql#sp_create_unit returns a unit id;pgtap:db/tests/t09_contract_routines.sql#sp_create_unit refuses a duplicate (model, serial)",pass
+FR-4.2,P0,GET /units/{id}/qr,pytest:api/tests/test_units.py::test_flows_f1_and_f2;e2e:e2e/f5.spec.ts,pass
+FR-4.3,P0,GET /units/{passport_uid}; GET /units?model_id=&serial_no=,pytest:api/tests/test_units.py::test_flows_f1_and_f2;pytest:api/tests/test_units.py::test_guards_and_errors,pass
+FR-4.4,P0,v_unit_passport; GET /units/{passport_uid},pytest:api/tests/test_units.py::test_flows_f1_and_f2;pgtap:db/tests/t08_queries.sql#public passport: health 86,pass
+FR-4.5,P0,v_unit_current (no status column on unit),pgtap:db/tests/t11_requirements.sql#FR-4.5: unit has no status;pgtap:db/tests/t08_queries.sql#Q3: laptop A is RECYCLED,pass
+FR-4.6,P1,sp_bulk_create_units; POST /units/bulk,pgtap:db/tests/t09_contract_routines.sql#sp_bulk_create_units is all-or-nothing;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-5.1,P0,assembly_link; sp_reinstall,pgtap:db/tests/t01_rules.sql#periods are half-open;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-5.2,P0,assembly_link_excl (C1),pgtap:db/tests/t01_rules.sql#T-C1: duplicate reinstall is refused;e2e:e2e/f2.spec.ts,pass
+FR-5.3,P0,trg_asm_no_cycle (C2),pgtap:db/tests/t01_rules.sql#T-C2: a laptop cannot be installed inside its own battery,pass
+FR-5.4,P0,trg_event_harvest (C6),pgtap:db/tests/t05_harvest_tests.sql#T-C6: harvesting closed the period,pass
+FR-5.5,P0,fn_part_tree; GET /units/{id}/tree,pgtap:db/tests/t08_queries.sql#Q2: laptop B holds the reinstalled battery now;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-5.6,P0,"fn_part_tree(root, as_of)",pgtap:db/tests/t08_queries.sql#Q2: laptop A held four parts on 2026-01-01;pgtap:db/tests/t08_queries.sql#Q2: at the dismantle instant,pass
+FR-5.7,P1,assembly_link; GET /units/{id}/history,pgtap:db/tests/t08_queries.sql#FR-5.7: the battery has been inside;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-5.8,P0,sp_dismantle; POST /units/{id}/dismantle,pgtap:db/tests/t05_harvest_tests.sql#sp_dismantle is atomic;e2e:e2e/f1.spec.ts,pass
+FR-6.1,P0,lifecycle_event.event_type CHECK; sp_record_event,pgtap:db/tests/t11_requirements.sql#FR-6.1: an event type outside the nine is refused;pgtap:db/tests/t11_requirements.sql#FR-6.1: the event_type CHECK constraint,pass
+FR-6.2,P0,"lifecycle_event.occurred_at, recorded_at",pgtap:db/tests/t03_chain.sql#future-dated events are refused,pass
+FR-6.3,P0,trg_event_immutable (C3),pgtap:db/tests/t02_immutable.sql#T-C3: UPDATE on lifecycle_event is refused;pgtap:db/tests/t02_immutable.sql#T-C3: DELETE on lifecycle_event is refused,pass
+FR-6.4,P0,trg_event_20_chain (C4),pgtap:db/tests/t03_chain.sql#T-C4: every unit;pgtap:db/tests/t03_chain.sql#the genesis hash follows the documented input format,pass
+FR-6.5,P0,trg_event_10_transition (C5),pgtap:db/tests/t04_transitions.sql#T-C5: SOLD -> REINSTALLED is refused;pgtap:db/tests/t04_transitions.sql#T-C5b,pass
+FR-6.6,P1,lifecycle_event.corrects_event_id,pgtap:db/tests/t11_requirements.sql#FR-6.6: a correction event references the event it corrects,pass
+FR-6.7,P0,GET /units/{id}/events,pytest:api/tests/test_units.py::test_flows_f1_and_f2;e2e:e2e/f4.spec.ts,pass
+FR-7.1,P0,trg_test_event_type (C7),pgtap:db/tests/t05_harvest_tests.sql#T-C7: a test on a HARVESTED event is refused,pass
+FR-7.2,P0,diagnostic_test CHECKs; sp_record_tests,pgtap:db/tests/t05_harvest_tests.sql#a health score above 100 is refused;pgtap:db/tests/t09_contract_routines.sql#sp_record_tests refuses a score above 100,pass
+FR-7.3,P0,v_reuse_inventory; GET /inventory/reuse,pgtap:db/tests/t08_queries.sql#Q4: category BATTERY with min health 80;pytest:api/tests/test_units.py::test_flows_f1_and_f2;e2e:e2e/f1.spec.ts,pass
+FR-7.4,P2,—,,deferred (P2)
+FR-8.1,P0,sp_create_transfer; POST /transfers,pgtap:db/tests/t06_custody.sql#a manifest cannot go from an organisation to itself;pgtap:db/tests/t09_contract_routines.sql#sp_create_transfer stores the manifest with its item;pytest:api/tests/test_epr.py::test_custody_manifest_flow,pass
+FR-8.2,P0,"custody_transfer.total_mass_kg, transfer_item.declared_condition",pgtap:db/tests/t11_requirements.sql#FR-8.2: a manifest mass of zero is refused;pgtap:db/tests/t11_requirements.sql#FR-8.2: a declared condition,pass
+FR-8.3,P0,sp_receive_transfer; POST /transfers/{id}/receive,pgtap:db/tests/t06_custody.sql#the receiving organisation confirms receipt;pgtap:db/tests/t06_custody.sql#the sender cannot confirm receipt;pytest:api/tests/test_epr.py::test_custody_manifest_flow,pass
+FR-8.4,P1,transfer_discrepancy,pgtap:db/tests/t06_custody.sql#the missing unit was recorded as a discrepancy;e2e:e2e/f3.spec.ts,pass
+FR-8.5,P0,trg_transfer_one_open (C8),pgtap:db/tests/t06_custody.sql#T-C8: a unit on an open manifest,pass
+FR-8.6,P0,v_unit_current.current_holder_org_id,pgtap:db/tests/t06_custody.sql#the holder is the receiver of the latest received manifest,pass
+FR-8.7,P1,Q7; GET /reports/custody-gaps,pgtap:db/tests/t08_queries.sql#Q7: the one unit with no manifest;pytest:api/tests/test_reports.py::test_custody_gap_report_lists_the_unmanifested_unit;e2e:e2e/f4.spec.ts,pass
+FR-9.1,P0,sp_issue_certificate; POST /certificates,pgtap:db/tests/t11_requirements.sql#FR-9.1: a financial year not written YYYY-YY is refused;pgtap:db/tests/t09_contract_routines.sql#sp_issue_certificate writes one CERT_ISSUE audit row;pytest:api/tests/test_epr.py::test_certificate_allocation_and_compliance,pass
+FR-9.2,P0,trg_cert_unit_recycled (C9),pgtap:db/tests/t07_epr.sql#T-C9: a unit that was never recycled;pytest:api/tests/test_epr.py::test_certificate_allocation_and_compliance,pass
+FR-9.3,P0,certificate_unit_pkey (C10a),pgtap:db/tests/t07_epr.sql#T-C10a: a unit cannot back a second certificate;pytest:api/tests/test_epr.py::test_certificate_allocation_and_compliance,pass
+FR-9.4,P0,trg_cert_quantity (C10b),pgtap:db/tests/t07_epr.sql#T-C10b: 5 kg claimed against 1.1 kg backed is refused;pgtap:db/tests/t07b_commit_overclaim.sql#T-C10b: the over-claiming certificate was not committed;e2e:e2e/f3.spec.ts,pass
+FR-9.5,P0,sp_allocate_certificate; POST /certificates/{id}/allocate,pgtap:db/tests/t09_contract_routines.sql#sp_allocate_certificate sets the producer;pytest:api/tests/test_epr.py::test_certificate_allocation_and_compliance;e2e:e2e/f3.spec.ts,pass
+FR-9.6,P1,v_epr_compliance; GET/PUT /compliance/{producer_id},pgtap:db/tests/t07_epr.sql#compliance: 0.9 kg of a 10 kg target is 9.0%;pytest:api/tests/test_epr.py::test_certificate_allocation_and_compliance,pass
+FR-9.7,P0,v_certificate_backing,pgtap:db/tests/t07_epr.sql#Q6: no certificate is over-claimed;pytest:api/tests/test_reports.py::test_report_roles_and_parameters,pass
+FR-10.1,P0,Q1 v_unit_passport; GET /reports/passport,pytest:api/tests/test_reports.py::test_report_roles_and_parameters;pytest:api/tests/test_units.py::test_flows_f1_and_f2,pass
+FR-10.2,P0,Q2 fn_part_tree; GET /reports/part-tree,pgtap:db/tests/t08_queries.sql#Q2: laptop A held four parts on 2026-01-01;pytest:api/tests/test_reports.py::test_report_roles_and_parameters,pass
+FR-10.3,P0,Q3 v_unit_current; GET /reports/current-state,pgtap:db/tests/t08_queries.sql#Q3: laptop A is RECYCLED;pytest:api/tests/test_reports.py::test_csv_has_the_same_rows_as_json,pass
+FR-10.4,P0,Q4 v_reuse_inventory; GET /reports/reuse-inventory,pgtap:db/tests/t08_queries.sql#Q4: the loose battery is listed with health 86;pytest:api/tests/test_reports.py::test_report_roles_and_parameters,pass
+FR-10.5,P1,Q5 mv_material_recovery,pgtap:db/tests/t08_queries.sql#Q5: one recycled laptop recovered 1 kg of copper;pgtap:db/tests/t09_contract_routines.sql#sp_refresh_material_recovery refreshes the view,pass
+FR-10.6,P0,Q6 v_certificate_backing,pgtap:db/tests/t07_epr.sql#Q6: no certificate is over-claimed;pytest:api/tests/test_reports.py::test_report_roles_and_parameters,pass
+FR-10.7,P1,Q7 custody gaps,pgtap:db/tests/t08_queries.sql#Q7: the one unit with no manifest;pytest:api/tests/test_reports.py::test_custody_gap_report_lists_the_unmanifested_unit,pass
+FR-10.8,P0,"Q8 sp_verify_chain; GET /audit/verify, /reports/tamper-check",pgtap:db/tests/t03_chain.sql#T-C4/Q8: sp_verify_chain reports the first broken link;pytest:api/tests/test_reports.py::test_tamper_check_after_edit;e2e:e2e/f4.spec.ts,pass
+FR-10.9,P1,GET /reports/{name}?format=csv,pytest:api/tests/test_reports.py::test_csv_has_the_same_rows_as_json,pass
+FR-11.1,P0,GET /public/p/{passport_uid}; v_public_passport,pytest:api/tests/test_public.py::test_public_json_keys_equal_the_public_passport_keys;e2e:e2e/f5.spec.ts,pass
+FR-11.2,P0,v_public_passport; role public_reader,pgtap:db/tests/t10_roles.sql#public_reader gets permission denied on unit;pytest:api/tests/test_public.py::test_public_reader_cannot_read_base_tables;e2e:e2e/f5.spec.ts,pass
+FR-11.3,P0,unit.passport_uid (UUIDv4),pgtap:db/tests/t11_requirements.sql#FR-11.3: every passport id is a version-4 UUID;pytest:api/tests/test_public.py::test_public_json_keys_equal_the_public_passport_keys,pass
+FR-12.1,P1,GET /admin/dashboard; admin Overview tab,pytest:api/tests/test_reports.py::test_admin_dashboard_counts_match_the_tables,pass
+FR-12.2,P1,audit_log; GET /audit/log,pgtap:db/tests/t10_roles.sql#the auditor reads audit_log;pytest:api/tests/test_reports.py::test_audit_log_is_for_oversight_roles,pass
+FR-12.3,P0,python -m seed,pytest:api/tests/test_seed.py::test_same_seed_gives_identical_counts_and_event_hashes,pass
+FR-12.4,P2,"ops/backup.sh, ops/restore_drill.sh",script:ops/restore_drill.sh;doc:ops/RESTORE.md,pass
+NFR-1,P0,constraints and triggers C1-C10,pgtap:db/tests/t01_rules.sql#T-C1;pgtap:db/tests/t02_immutable.sql#T-C3;pgtap:db/tests/t07_epr.sql#T-C10b;pgtap:db/tests/t10_roles.sql#rc_technician: INSERT INTO epr_certificate,pass
+NFR-2,P0,"stored routines, one transaction each",pgtap:db/tests/t05_harvest_tests.sql#sp_dismantle is atomic;pgtap:db/tests/t09_contract_routines.sql#sp_bulk_create_units is all-or-nothing;pgtap:db/tests/t07b_commit_overclaim.sql#the failed COMMIT rolled back the whole transaction,pass
+NFR-3,P0,assembly_link_excl under concurrency,script:loadtest/race.py;doc:docs/plans/SUMMARY.md;pgtap:db/tests/t01_rules.sql#T-C1,pass
+NFR-4,P0,"SERIALIZABLE certificate issue, retry on 40001",pytest:api/tests/test_epr.py::test_twenty_parallel_issuances_over_the_same_units_yield_one_certificate;script:loadtest/race.py,pass
+NFR-5,P0,valid time and transaction time; hash chain,pgtap:db/tests/t03_chain.sql#T-C4/Q8: sp_verify_chain reports the first broken link;pgtap:db/tests/t02_immutable.sql#the refusals changed no rows,pass
+NFR-6,P0,indexes; k6 on the large profile,k6:loadtest/passport.js;doc:docs/plans/SUMMARY.md,pass
+NFR-7,P0,"indexes (FK, passport, unit+time, GiST, GIN)","pgtap:db/tests/t11_requirements.sql#NFR-7: the (unit, time), parent, GiST, GIN and join indexes exist;doc:docs/plans/SUMMARY.md",pass
+NFR-8,P0,"bcrypt, JWT, roles, RLS, parameterised SQL",pytest:api/tests/test_auth.py::test_role_guard_and_token_expiry;pgtap:db/tests/t10_roles.sql#rc_app is NOINHERIT;pytest:api/tests/test_pipeline.py::test_nothing_outside_the_allow_list_is_callable,pass
+NFR-9,P0,v_public_passport; role public_reader,pytest:api/tests/test_public.py::test_public_json_keys_equal_the_public_passport_keys;pgtap:db/tests/t10_roles.sql#public_reader reads v_public_passport: health 86;e2e:e2e/f5.spec.ts,pass
+NFR-10,P0,ops/backup.sh; restore drill,script:ops/restore_drill.sh;doc:ops/RESTORE.md,pass
+NFR-11,P0,responsive web portal,e2e:e2e/f6.spec.ts,pass
+NFR-12,P0,numbered migrations; docker compose up,ci:.github/workflows/ci.yml;make:Makefile#e2e;pgtap:db/tests/t11_requirements.sql#NFR-13,pass
+NFR-13,P0,"PostgreSQL 16, pgcrypto, btree_gist only",pgtap:db/tests/t11_requirements.sql#NFR-13: the only extensions are pgcrypto and btree_gist,pass
+NFR-14,P0,WCAG 2.1 AA,lighthouse:e2e/lighthouse.mjs;e2e:e2e/f6.spec.ts,pass
