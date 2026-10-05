@@ -102,3 +102,44 @@ def settings(pg: Pg) -> Settings:
 @pytest.fixture
 def app(settings: Settings, database: Database) -> Any:
     return create_app(settings, database)
+
+
+@dataclass
+class Demo:
+    auditor: Claims
+    admin: Claims
+    unit_id: int
+    passport_uid: str
+    gap_unit_id: int
+    tamper_event_id: int
+
+
+@pytest.fixture(scope="session")
+def demo(pg: Pg, world: World) -> Demo:
+    """An auditor, an admin, one fully tested unit and one unit with a custody gap."""
+    from datetime import UTC, datetime, timedelta
+    base = datetime.now(UTC) - timedelta(days=20)
+    with psycopg.connect(pg.url("rc_owner"), autocommit=True) as conn:
+        def one(q: str, *a: Any) -> Any:
+            row = conn.execute(q, a).fetchone()
+            assert row is not None
+            return row[0]
+        aud = int(one("SELECT sp_admin_create_actor(%s,'Demo Auditor','AUDITOR','aud@example.com','x')", world.fac_p))
+        adm = int(one("SELECT sp_admin_create_actor(%s,'Demo Admin','ADMIN','adm@example.com','x')", world.fac_p))
+        unit = int(one("SELECT sp_create_unit(%s,'DEMO-1')", world.model_ssd))
+        gap = int(one("SELECT sp_create_unit(%s,'DEMO-GAP')", world.model_ssd))
+        with conn.transaction():
+            conn.execute("SELECT set_config('rc.org_id', %s, true), set_config('rc.actor_id', %s, true)",
+                         (str(world.org_p), str(world.actor_p)))
+            conn.execute("CALL sp_record_event(%s,'MANUFACTURED',%s,%s)", (unit, base, world.fac_p))
+            conn.execute("CALL sp_record_event(%s,'MANUFACTURED',%s,%s)", (gap, base, world.fac_p))
+        with conn.transaction():
+            conn.execute("SELECT set_config('rc.org_id', %s, true), set_config('rc.actor_id', %s, true)",
+                         (str(world.org_t), str(world.actor_t)))
+            conn.execute("CALL sp_record_event(%s,'COLLECTED',%s,%s)", (unit, base + timedelta(days=1), world.fac_t))
+            conn.execute("CALL sp_record_event(%s,'COLLECTED',%s,%s)", (gap, base + timedelta(days=1), world.fac_t))
+            conn.execute("""CALL sp_record_tests(%s,%s,%s,'[{"test_type":"BATTERY_SOH","result":"PASS","measured_value":86,"health_score":86}]'::jsonb)""",
+                         (unit, base + timedelta(days=2), world.fac_t))
+        uid = str(one("SELECT passport_uid FROM unit WHERE unit_id = %s", unit))
+        tamper = int(one("SELECT event_id FROM lifecycle_event WHERE unit_id = %s AND event_type = 'COLLECTED'", unit))
+    return Demo(Claims(aud, world.org_p, "AUDITOR"), Claims(adm, world.org_p, "ADMIN"), unit, uid, gap, tamper)

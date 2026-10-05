@@ -177,3 +177,46 @@ class TargetRequest(BaseModel):
     category: str = Field(min_length=1, max_length=20)
     financial_year: str = Field(pattern=r"^[0-9]{4}-[0-9]{2}$")
     target_kg: float = Field(gt=0)
+
+
+# --- public passport, administration (T3.6) ---------------------------------------------------------------------
+class HistoryEntry(BaseModel):
+    type: EventType
+    date: str
+
+
+class PublicPassport(BaseModel):
+    passport_uid: str
+    model_number: str
+    category: Category
+    manufacturer: str
+    manufactured_on: str | None
+    current_state: EventType | None
+    history: list[HistoryEntry]
+    latest_health: int | None
+    chain_verified: bool
+
+
+class OrganizationCreate(BaseModel):
+    org_name: str = Field(min_length=1, max_length=120)
+    org_type: OrgType
+    cpcb_reg_no: str | None = Field(default=None, max_length=30)
+    gstin: str | None = Field(default=None, min_length=15, max_length=15)
+
+
+class FacilityCreate(BaseModel):
+    facility_name: str = Field(min_length=1, max_length=120)
+    pincode: str = Field(pattern=r"^[1-9][0-9]{5}$")
+    authorised_capacity_tpa: float | None = Field(default=None, ge=0)
+
+
+class ActorCreate(BaseModel):
+    facility_id: int
+    full_name: str = Field(min_length=1, max_length=100)
+    role: Role
+    email: str = Field(min_length=3, max_length=120)
+    password: str = Field(min_length=10, max_length=256)
+
+
+class ActorPatch(BaseModel):
+    is_active: bool
