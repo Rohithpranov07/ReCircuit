@@ -4,6 +4,8 @@ export
 
 DB_HOST_PORT  ?= 5432
 DB_CONTAINER  := docker compose exec -T db
+PYTHON        ?= api/.venv/bin/python
+APP_MIGRATE_URL := postgres://rc_owner:$(strip $(RC_OWNER_PASSWORD))@localhost:$(strip $(DB_HOST_PORT))/recircuit?sslmode=disable
 TEST_DB       := recircuit_test
 MIGRATE_URL   := postgres://rc_owner:$(strip $(RC_OWNER_PASSWORD))@localhost:$(strip $(DB_HOST_PORT))/$(TEST_DB)?sslmode=disable
 
@@ -23,3 +25,15 @@ db-test:
 	docker compose cp db/tests db:/tmp/rc/db/tests
 	docker compose cp db/fixtures db:/tmp/rc/db/fixtures
 	$(DB_CONTAINER) bash -c 'cd /tmp/rc/db/tests && pg_prove -U postgres -d $(TEST_DB) t*.sql'
+
+.PHONY: e2e
+# Starts from nothing: a fresh database, the migrations, the small seed (python -m seed, never direct SQL), the whole
+# stack, then the five browser flows F1-F5. WARNING: `down -v` deletes the local database volume.
+e2e:
+	docker compose down -v
+	docker compose up -d --wait db
+	DBMATE_MIGRATIONS_TABLE=dbmate.schema_migrations DBMATE_NO_DUMP_SCHEMA=true \
+	  dbmate --url "$(APP_MIGRATE_URL)" -d db/migrations up >/dev/null
+	$(PYTHON) -m seed --profile small --seed 42 | sed -n '/^profile/,/allocated/p'
+	docker compose up -d --build --wait api web
+	cd e2e && npm ci && npx playwright install chromium && npx playwright test
