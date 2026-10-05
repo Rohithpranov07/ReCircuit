@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { CertificateRow, Me, UnitStateRow } from '../../api/types';
 import { AppShell } from '../../components/AppShell';
@@ -67,7 +68,7 @@ function Incoming({ me }: { me: Me }) {
           <ul className="space-y-5">
             {waiting.map((t) => (
               <li key={t.transfer_id} className="rounded-md border border-solder bg-white p-4">
-                <p className="font-medium">{t.manifest_no} <span className="font-normal text-ink-soft">from {t.from_org} · shipped {fmt.format(new Date(t.shipped_at))}</span></p>
+                <p className="font-medium"><Link to={`/manifest/${t.transfer_id}`} className="text-trace underline underline-offset-2">{t.manifest_no}</Link> <span className="font-normal text-ink-soft">from {t.from_org} · shipped {fmt.format(new Date(t.shipped_at))}</span></p>
                 <fieldset className="mt-3">
                   <legend className="text-sm text-ink-soft">Tick any unit that did not arrive</legend>
                   <ul className="mt-2 space-y-1">

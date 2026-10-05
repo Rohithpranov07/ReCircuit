@@ -111,3 +111,23 @@ export interface UnitStateRow {       // GET /reports/current-state
   current_holder_org_id: number | null; serial_no: string; model_number: string; category: Category;
   mass_g: string; certificate_id: number | null;
 }
+
+// --- remaining screens (T4.5) ------------------------------------------------------------------------------
+export type ReportRow = Record<string, unknown>;
+export interface MaterialRow { material_id: number; material_name: string; is_critical: boolean; is_hazardous: boolean }
+export interface ComplianceRow {      // GET /compliance/{producer_id}
+  producer_id: number; category: string; financial_year: string; target_kg: string; acquired_kg: string; pct_of_target: string;
+}
+export interface AuditLogRow {        // GET /audit/log
+  log_id: number; logged_at: string; actor_id: number; actor_name: string; action: string; entity: string; entity_id: string;
+  details: Record<string, unknown> | null;
+}
+export interface VerifyOne { unit_id: number; verified: boolean; first_broken_event_id: number | null }
+export interface VerifyAll { checked: number; verified: boolean; broken: { unit_id: number; first_broken_event_id: number }[] }
+export interface ActorRow {           // GET /actors
+  actor_id: number; full_name: string; role: Role; email: string; is_active: boolean; facility_id: number; facility_name: string; org_id: number;
+}
+export interface AdminOrgRow {
+  org_id: number; org_name: string; org_type: OrgType; cpcb_reg_no: string | null; gstin: string | null;
+  facilities: { facility_id: number; facility_name: string; pincode: string; authorised_capacity_tpa: string | null }[];
+}

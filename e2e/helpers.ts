@@ -58,3 +58,12 @@ export async function findUnit(page: Page, label: string, passportUid: string): 
   await page.locator('form', { has: input }).getByRole('button', { name: 'Find' }).click();
   expect((await answered).ok()).toBeTruthy();
 }
+
+import { execFileSync } from 'node:child_process';
+import { resolve } from 'node:path';
+
+/** Run SQL as the database superuser. Used only to simulate tampering, which no API allows by design. */
+export function superuserSql(sql: string): string {
+  return execFileSync('docker', ['compose', 'exec', '-T', 'db', 'psql', '-U', 'postgres', '-d', 'recircuit', '-Atq', '-c', sql],
+    { cwd: resolve(import.meta.dirname, '..'), encoding: 'utf8' }).trim();
+}

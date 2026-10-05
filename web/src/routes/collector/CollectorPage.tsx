@@ -1,5 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api } from '../../api/client';
 import type { Condition, EventResult, Me, ModelRow, UnitPassport } from '../../api/types';
 import { AppShell } from '../../components/AppShell';
@@ -169,7 +170,7 @@ function Manifests({ me }: { me: Me }) {
           <ul className="divide-y divide-solder">
             {open.map((t) => (
               <li key={t.transfer_id} className="flex flex-wrap items-baseline justify-between gap-2 py-2">
-                <span className="font-medium">{t.manifest_no}</span>
+                <Link to={`/manifest/${t.transfer_id}`} className="font-medium text-trace underline underline-offset-2">{t.manifest_no}</Link>
                 <span className="text-sm text-ink-soft">to {t.to_org} · {t.items.length} unit{t.items.length === 1 ? '' : 's'}</span>
               </li>
             ))}

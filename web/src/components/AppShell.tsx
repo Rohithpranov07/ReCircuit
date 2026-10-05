@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { ROLE_HOME, ROLE_LABELS } from '../auth/roles';
 
@@ -13,6 +13,13 @@ export function AppShell({ children, wide = false }: { children: ReactNode; wide
           <Link to={session ? ROLE_HOME[session.role] : '/login'} className="text-lg font-semibold tracking-tight text-trace">
             ReCircuit
           </Link>
+          {session && (
+            <nav aria-label="Main" className="hidden items-center gap-4 text-sm sm:flex">
+              {[['Home', ROLE_HOME[session.role]], ['Reports', '/reports'], ...(session.role === 'PRODUCER' ? [['Catalogue', '/catalogue']] : [])].map(([label, to]) => (
+                <NavLink key={to} to={to ?? '/'} end className={({ isActive }) => (isActive ? 'font-medium text-trace' : 'text-ink-soft hover:text-ink')}>{label}</NavLink>
+              ))}
+            </nav>
+          )}
           {session && (
             <div className="flex items-center gap-3 text-sm">
               <span className="hidden text-ink-soft sm:inline">{ROLE_LABELS[session.role]}</span>

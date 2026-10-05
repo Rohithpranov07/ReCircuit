@@ -17,10 +17,20 @@ const TechnicianPage = lazy(() => import('./routes/technician/TechnicianPage'));
 
 const RecyclerPage = lazy(() => import('./routes/recycler/RecyclerPage'));
 
+const ProducerPage = lazy(() => import('./routes/producer/ProducerPage'));
+const AuditorPage = lazy(() => import('./routes/auditor/AuditorPage'));
+const AdminPage = lazy(() => import('./routes/admin/AdminPage'));
+const CataloguePage = lazy(() => import('./routes/catalogue/CataloguePage'));
+const ReportsPage = lazy(() => import('./routes/reports/ReportsPage'));
+const ManifestPage = lazy(() => import('./routes/manifest/ManifestPage'));
+
 const HOME_SCREEN: Partial<Record<Role, JSX.Element>> = {
   COLLECTOR: <CollectorPage />,
   TECHNICIAN: <TechnicianPage />,
   RECYCLER_OPERATOR: <RecyclerPage />,
+  PRODUCER: <ProducerPage />,
+  AUDITOR: <AuditorPage />,
+  ADMIN: <AdminPage />,
 };
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });
@@ -37,6 +47,11 @@ export default function App() {
               <Route path="/p/:passportUid" element={<PublicPassportPage />} />
               <Route element={<RequireAuth />}>
                 <Route path="/unit/:passportUid" element={<PassportPage />} />
+                <Route path="/reports" element={<ReportsPage />} />
+                <Route path="/manifest/:transferId" element={<ManifestPage />} />
+              </Route>
+              <Route element={<RequireAuth roles={['PRODUCER']} />}>
+                <Route path="/catalogue" element={<CataloguePage />} />
               </Route>
               {(Object.keys(ROLE_HOME) as Role[]).map((role) => (
                 <Route key={role} element={<RequireAuth roles={[role]} />}>

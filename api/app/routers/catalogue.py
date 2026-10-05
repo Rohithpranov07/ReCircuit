@@ -49,3 +49,11 @@ async def set_materials(model_id: int, body: list[MaterialInput], request: Reque
     await _db(request).run(claims, "sp_set_materials", p_model=model_id,
                            p_materials=[m.model_dump() for m in body])
     return Response(status_code=204)
+
+
+@router.get("/materials")
+async def list_materials(request: Request,
+                         claims: Claims = Depends(require_roles(*STAFF))) -> list[dict[str, Any]]:
+    """The tracked-material catalogue, for the model composition editor."""
+    return await _db(request).query(
+        claims, "SELECT material_id, material_name, is_critical, is_hazardous FROM material ORDER BY material_name")
