@@ -10,6 +10,7 @@ dependencies = [
   "psycopg[binary,pool]==3.3.6",
   "pyjwt==2.15.1",
   "passlib[bcrypt]==1.7.4",
+  "qrcode[pil]==8.2",
   "bcrypt==4.0.1",   # passlib 1.7.4 breaks with bcrypt >= 4.1
 ]
 
@@ -24,6 +25,7 @@ dev = [
   "ruff==0.16.10",
   "mypy==2.4.0",
   "types-passlib==1.7.7.20260211",
+  "types-qrcode",
   "pytest==9.1.1",
   "pytest-asyncio==1.4.0",
   "httpx==0.28.1",
@@ -44,3 +46,11 @@ asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 pythonpath = ["."]
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Cookie"]
+
+[tool.ruff.lint.per-file-ignores]
+# FastAPI declares dependencies as call expressions in parameter defaults (Depends(require_roles(...)))
+"app/routers/*" = ["B008"]
+"tests/*" = ["B008"]

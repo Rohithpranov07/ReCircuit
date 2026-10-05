@@ -2,7 +2,7 @@
 allow-listed routines, bound parameters (TRD section 2.1, erratum E1)."""
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal, LiteralString
 
@@ -88,19 +88,29 @@ class Database:
         raise ApiException(409, "CONFLICT_RETRY", "The request conflicted with another one; please retry")
 
     async def run(self, claims: Claims | None, routine: str, *, db_role: str | None = None,
-                  isolation: Literal["serializable"] | None = None, **params: Any) -> list[dict[str, Any]]:
-        """Call one allow-listed routine inside one transaction. Returns the rows (empty for procedures)."""
+                  isolation: Literal["serializable"] | None = None,
+                  followup: tuple[LiteralString, Sequence[Any] | Mapping[str, Any]] | None = None, **params: Any) -> list[dict[str, Any]]:
+        """Call one allow-listed routine inside one transaction. Returns the routine's rows (empty for
+        procedures), or the rows of `followup` (a literal read query run in the same transaction) when given."""
         statement, values = build_statement(routine, params)
         is_call = ROUTINES[routine].kind == "PROCEDURE"
 
         async def work(conn: psycopg.AsyncConnection[dict[str, Any]]) -> list[dict[str, Any]]:
             cur = await conn.execute(statement, values)
-            return [] if is_call else await cur.fetchall()
+            rows: list[dict[str, Any]] = [] if is_call else await cur.fetchall()
+            if followup is not None:
+                cur = await conn.execute(followup[0], followup[1])
+                rows = await cur.fetchall()
+            return rows
 
         result: list[dict[str, Any]] = await self._within(claims, db_role, isolation, work)
         return result
 
-    async def query(self, claims: Claims | None, query: LiteralString, params: list[Any] | None = None, *,
+    async def transaction(self, claims: Claims | None, work: Any, *, db_role: str | None = None) -> Any:
+        """Run several reads in one transaction (one consistent snapshot) under the caller's role."""
+        return await self._within(claims, db_role, None, work)
+
+    async def query(self, claims: Claims | None, query: LiteralString, params: Sequence[Any] | Mapping[str, Any] | None = None, *,
                     db_role: str | None = None) -> list[dict[str, Any]]:
         """Read through a view in one transaction under the caller's role. `query` must be a literal."""
         async def work(conn: psycopg.AsyncConnection[dict[str, Any]]) -> list[dict[str, Any]]:

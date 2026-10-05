@@ -17,7 +17,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T3.1 Migration 013: roles, grants, RLS
 - [x] T3.2 API skeleton: config, pipeline, error mapper
 - [x] T3.3 Authentication
-- [ ] T3.4 Routers: catalogue, units, assembly, events, tests
+- [x] T3.4 Routers: catalogue, units, assembly, events, tests
 - [ ] T3.5 Routers: transfers, certificates, compliance
 - [ ] T3.6 Routers: reports, audit, admin, public
 - [ ] T4.1 Web scaffold, types, API client, auth
@@ -50,3 +50,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
   - Staff views run as the caller, so v_unit_current's holder is computed from the manifests the caller may see (RLS); it can differ between organisations.
 - T3.2: API skeleton in api/app (config, allowlist, db pipeline, errors, health). Routines are called with named notation (`p_unit => %s::bigint`) so omitted arguments use the routine's default. The error mapper additionally maps FK violations (23503) and data exceptions (class 22) to INVALID_VALUE 400 instead of a 500, and request-validation errors to INVALID_VALUE 400. API tests run against a testcontainers PostgreSQL 16 built from the real migrations (needs Docker and dbmate on PATH).
 - T3.3: auth in api/app/auth.py and routers/auth.py. A locked account answers exactly like a wrong password (generic 401 INVALID_CREDENTIALS), so lockout is not observable. Refresh sessions and failure counters are in process memory (single instance). bcrypt is pinned to 4.0.1 and confirmed working with passlib 1.7.4 here. app/main.py was touched only to mount the router. Access-token expiry is judged on an injectable clock (tests).
+- T3.4: routers for catalogue, units, assembly, events, tests, reuse inventory and QR. The passport reads unit_id by passport_uid first, then the view by unit_id (see docs/plans/SUMMARY.md). Harvest and reinstall are TECHNICIAN-only (TRD matrix, enforced by grants); dismantle is COLLECTOR and TECHNICIAN. `Database.run` gained a `followup` read executed in the same transaction (used to return the new event's hash), and `Database.transaction` runs several reads in one snapshot. Not-found answers use code NOT_FOUND (404), which the §B.4 catalogue does not list. No GET /materials route exists in §B.3, so the catalogue editor (S11) will need the material list from somewhere; flagged for T4.5.
