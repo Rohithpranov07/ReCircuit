@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from psycopg.types.json import Jsonb
@@ -14,7 +14,6 @@ from seed.db import call, set_context
 from seed.profiles import Profile
 from seed.world import ModelInfo, OrgInfo, World
 
-UTC = timezone.utc
 COLLECT_FROM = datetime(2025, 1, 1, tzinfo=UTC)
 COLLECT_TO = datetime(2026, 6, 30, tzinfo=UTC)
 CUTOFF = datetime(2026, 9, 30, tzinfo=UTC)          # nothing is ever dated after this (events must be past)

@@ -13,7 +13,7 @@ import re
 import sys
 import time
 from collections.abc import Iterable
-from datetime import date, timedelta, timezone
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -26,8 +26,6 @@ from seed.profiles import PROFILES, Profile
 from seed.runner import init_worker, run_chunk
 from seed.scenario import CERT_CATEGORIES
 from seed.world import DEMO_PASSWORD, World, build_world
-
-UTC = timezone.utc
 
 
 def load_env() -> dict[str, str]:
