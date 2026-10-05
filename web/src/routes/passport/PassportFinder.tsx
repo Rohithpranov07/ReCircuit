@@ -1,5 +1,7 @@
 import { useCallback, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from '../../api/client';
+import { useModels } from './shared';
 import { QrScanner } from './QrScanner';
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
@@ -14,6 +16,20 @@ export function PassportFinder() {
   const [text, setText] = useState('');
   const [scanning, setScanning] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const models = useModels();
+  const [modelId, setModelId] = useState('');
+  const [serial, setSerial] = useState('');
+
+  async function bySerial(e: FormEvent) {
+    e.preventDefault();
+    setProblem(null);
+    try {
+      const unit = await api<{ passport_uid: string }>(`/units?model_id=${modelId}&serial_no=${encodeURIComponent(serial.trim())}`, { quiet: true });
+      navigate(`/unit/${unit.passport_uid}`);
+    } catch {
+      setProblem('No unit with that model and serial number was found.');
+    }
+  }
 
   const open = useCallback((raw: string) => {
     const uid = passportIdFrom(raw);
@@ -42,6 +58,16 @@ export function PassportFinder() {
         <button type="button" onClick={() => setScanning((s) => !s)} className="rounded-md border border-solder px-4 py-2">
           {scanning ? 'Hide camera' : 'Scan QR code'}
         </button>
+      </form>
+      <form onSubmit={(e) => void bySerial(e)} className="mt-3 flex flex-col gap-2 sm:flex-row">
+        <label className="sr-only" htmlFor="by-model">Model</label>
+        <select id="by-model" value={modelId} onChange={(e) => setModelId(e.target.value)} className="min-w-0 flex-1 rounded-md border border-solder bg-white px-3 py-2">
+          <option value="">Or look up by model…</option>
+          {(models.data ?? []).map((m) => <option key={m.model_id} value={m.model_id}>{m.model_number}</option>)}
+        </select>
+        <label className="sr-only" htmlFor="by-serial">Serial number</label>
+        <input id="by-serial" value={serial} onChange={(e) => setSerial(e.target.value)} placeholder="Serial number" className="min-w-0 flex-1 rounded-md border border-solder bg-white px-3 py-2" />
+        <button type="submit" disabled={!modelId || !serial.trim()} className="rounded-md border border-solder px-4 py-2 disabled:opacity-50">Look up</button>
       </form>
       {problem && <p role="alert" className="mt-2 text-sm text-fault">{problem}</p>}
       {scanning && (

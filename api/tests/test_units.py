@@ -126,6 +126,9 @@ async def test_flows_f1_and_f2(app: Any, http: httpx.AsyncClient, cast: Cast) ->
         row = conn.execute("SELECT passport_uid FROM unit WHERE unit_id = %s", (battery,)).fetchone()
         assert row is not None
         passport_uid = str(row[0])
+    by_serial = await http.get("/api/v1/units", headers=tech, params={"model_id": battery_model, "serial_no": "F-B"})
+    assert (by_serial.status_code, by_serial.json()["passport_uid"], by_serial.json()["unit_id"]) == (200, passport_uid, battery)
+    assert (await http.get("/api/v1/units", headers=tech, params={"model_id": battery_model, "serial_no": "nope"})).status_code == 404
     passport = (await http.get(f"/api/v1/units/{passport_uid}", headers=tech)).json()
     assert passport["current_state"] == "REINSTALLED"
     assert passport["current_parent"]["unit_id"] == laptop_b

@@ -63,6 +63,21 @@ async def bulk_create_units(body: BulkUnits, request: Request,
     return {"unit_ids": rows[0]["sp_bulk_create_units"]}
 
 
+# --- lookup ---------------------------------------------------------------------------------------------------
+@router.get("/units")
+async def find_unit(request: Request, model_id: int, serial_no: str = Query(min_length=1, max_length=60),
+                    claims: Claims = Depends(require_roles(*STAFF))) -> dict[str, Any]:
+    """FR-4.3: look a unit up by (model, serial); the answer is the same unit its QR code opens."""
+    rows = await _db(request).query(
+        claims,
+        """SELECT u.unit_id, u.passport_uid, u.serial_no, m.model_id, m.model_number
+             FROM unit u JOIN part_model m ON m.model_id = u.model_id
+            WHERE u.model_id = %s AND u.serial_no = %s""", [model_id, serial_no])
+    if not rows:
+        raise not_found("Unit")
+    return {**rows[0], "passport_uid": str(rows[0]["passport_uid"])}
+
+
 # --- passport -------------------------------------------------------------------------------------------------
 @router.get("/units/{passport_uid}", response_model=UnitPassport)
 async def get_passport(passport_uid: UUID, request: Request,

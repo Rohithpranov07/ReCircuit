@@ -30,7 +30,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T6.1 CI pipeline
 - [ ] T6.2 README and one-command setup
 - [ ] T6.3 Traceability matrix
-- [ ] T6.4 Backup and restore drill
+- [x] T6.4 Backup and restore drill
 - [ ] T6.5 Spec sync
 
 ## Notes
@@ -61,3 +61,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - T5.1: `make e2e` rebuilds from nothing (down -v, migrations, `python -m seed --profile small --seed 42`, api + web with healthchecks, Playwright) and runs F1-F5: 5 passed in about 11 s. The only direct SQL in the specs is the superuser tampering in F4 (restored afterwards). Note that `make e2e` deletes the local database volume, including any large-profile database loaded for T5.2.
 - T5.2: k6 on the large profile: passport p95 11.9 ms (< 200), tree p95 7.9 ms (< 300), 0 failures; race script confirms NFR-3 (10/10 rounds: one 201, one 409 ASM_OVERLAP) and NFR-4 (one certificate of 20). Results appended to docs/plans/SUMMARY.md. The compose database now holds the large dataset; `make e2e` resets it to the small seed.
 - T6.1: CI (.github/workflows/ci.yml): migrations up, every down migration and up again, pgTAP, ruff and mypy, pytest (testcontainers), web build and lint, and the five browser flows on main. Green run, all four jobs: https://github.com/Rohithpranov07/ReCircuit/actions/runs/37350100800 (the first push failed on a lint rule in seed code and was fixed in the next commit).
+- T6.4: ops/backup.sh (pg_dump -Fc, listing check, retention), ops/restore_drill.sh and ops/RESTORE.md with the real drill output (row counts equal, 505 chains verify, UPDATE still refused with RC003, grants and the six RLS tables survived). Found and fixed erratum E8: pg_restore refreshes mv_material_recovery with an empty search_path, so fn_org_of_facility (migration 002) now reads public.facility. Point-in-time recovery is documented as a procedure and has not been rehearsed.

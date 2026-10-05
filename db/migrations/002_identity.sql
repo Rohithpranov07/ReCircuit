@@ -29,7 +29,7 @@ CREATE TABLE actor (
 
 -- helper used by RLS and procedures
 CREATE FUNCTION fn_org_of_facility(f INT) RETURNS INT
-  LANGUAGE sql STABLE AS $$ SELECT org_id FROM facility WHERE facility_id = f $$;
+  LANGUAGE sql STABLE AS $$ SELECT org_id FROM public.facility WHERE facility_id = f $$;   -- qualified: pg_restore refreshes mv_material_recovery with an empty search_path (erratum E8)
 CREATE FUNCTION fn_ctx_org()  RETURNS INT  LANGUAGE sql STABLE AS $$ SELECT current_setting('rc.org_id')::INT $$;
 CREATE FUNCTION fn_ctx_role() RETURNS TEXT LANGUAGE sql STABLE AS $$ SELECT current_setting('rc.role') $$;
 
