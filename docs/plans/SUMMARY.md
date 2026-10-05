@@ -36,3 +36,27 @@ No view was rewritten to improve a plan.
    remedies need a schema or query change (store the organisation on the event, or a materialized gap list) and
    are left for an explicit decision rather than made silently here.
 3. Q5 (`mv_material_recovery`) is read from a materialized view and is not part of this evidence.
+
+# Load and concurrency evidence over HTTP (T5.2)
+
+Dataset: `python -m seed --profile large --seed 42 --jobs 4` loaded into the compose database (50,046 units,
+519,962 events), `ANALYZE`d, API in Docker. k6 v2.3.0, 60 s constant arrival rate, no response caching on staff
+endpoints; script `loadtest/passport.js`.
+
+| Endpoint | Load | p95 | avg | max | Target | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| `GET /units/{passport_uid}` | 40 req/s | 11.9 ms | 6.2 ms | 146 ms | p95 < 200 ms | **met** |
+| `GET /units/{unit_id}/tree` (now and as of 2025-09-01) | 30 req/s | 7.9 ms | 4.0 ms | 139 ms | p95 < 300 ms | **met** |
+
+4,204 requests, 0 failed. (The passport read follows the two-step access pattern from note 1 above; the direct
+`WHERE passport_uid` form of the view, 215 ms, is not what the API issues.)
+
+Concurrency (`loadtest/race.py`, real HTTP calls against the running stack):
+
+| Requirement | Scenario | Result |
+| --- | --- | --- |
+| NFR-3 | Two technicians reinstall the same part at the same instant, 10 rounds | every round: one `201` and one `409 ASM_OVERLAP` |
+| NFR-4 | 20 parallel certificate requests over the same 5 recycled units, SERIALIZABLE | one `201`; nineteen `409 CERT_UNIT_REUSED` |
+
+The same 20-way certificate race is also an automated test (`api/tests/test_epr.py`, T3.5): one `201`, nineteen
+`409` (`CERT_UNIT_REUSED` or `CONFLICT_RETRY`).
