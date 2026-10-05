@@ -15,9 +15,12 @@ const PublicPassportPage = lazy(() => import('./routes/public/PublicPassportPage
 const CollectorPage = lazy(() => import('./routes/collector/CollectorPage'));
 const TechnicianPage = lazy(() => import('./routes/technician/TechnicianPage'));
 
+const RecyclerPage = lazy(() => import('./routes/recycler/RecyclerPage'));
+
 const HOME_SCREEN: Partial<Record<Role, JSX.Element>> = {
   COLLECTOR: <CollectorPage />,
   TECHNICIAN: <TechnicianPage />,
+  RECYCLER_OPERATOR: <RecyclerPage />,
 };
 
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false, refetchOnWindowFocus: false } } });

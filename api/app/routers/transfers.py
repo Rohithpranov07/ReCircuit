@@ -26,8 +26,11 @@ async def list_transfers(request: Request,
         """SELECT ct.transfer_id, ct.manifest_no, ct.from_org_id, fo.org_name AS from_org, ct.to_org_id,
                   tor.org_name AS to_org, ct.shipped_at, ct.received_at, ct.total_mass_kg,
                   COALESCE((SELECT jsonb_agg(jsonb_build_object('unit_id', ti.unit_id,
-                                   'declared_condition', ti.declared_condition) ORDER BY ti.unit_id)
-                              FROM transfer_item ti WHERE ti.transfer_id = ct.transfer_id), '[]'::jsonb) AS items,
+                                   'declared_condition', ti.declared_condition, 'serial_no', u.serial_no,
+                                   'model_number', pm.model_number) ORDER BY ti.unit_id)
+                              FROM transfer_item ti JOIN unit u ON u.unit_id = ti.unit_id
+                              JOIN part_model pm ON pm.model_id = u.model_id
+                             WHERE ti.transfer_id = ct.transfer_id), '[]'::jsonb) AS items,
                   COALESCE((SELECT jsonb_agg(jsonb_build_object('unit_id', d.unit_id, 'kind', d.kind)
                                    ORDER BY d.unit_id)
                               FROM transfer_discrepancy d WHERE d.transfer_id = ct.transfer_id),

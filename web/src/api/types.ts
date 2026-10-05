@@ -74,7 +74,7 @@ export interface TransferRow {        // GET /transfers
   transfer_id: number; manifest_no: string; from_org_id: number; from_org: string;
   to_org_id: number; to_org: string; shipped_at: string; received_at: string | null;
   total_mass_kg: string | null;
-  items: { unit_id: number; declared_condition: Condition }[];
+  items: { unit_id: number; declared_condition: Condition; serial_no: string; model_number: string }[];
   discrepancies: { unit_id: number; kind: 'MISSING' | 'EXTRA' }[];
 }
 export interface CertificateRow {     // GET /certificates
@@ -104,3 +104,10 @@ export interface ReuseRow {           // GET /inventory/reuse
   latest_health: number | null; test_type: string | null; tested_at: string | null; current_holder_org_id: number | null;
 }
 export interface EventResult { event_type: EventType; event_hash: string }
+
+// --- recycler screens (T4.4) ---------------------------------------------------------------------------------
+export interface UnitStateRow {       // GET /reports/current-state
+  unit_id: number; passport_uid: string; current_state: EventType | null; state_since: string | null;
+  current_holder_org_id: number | null; serial_no: string; model_number: string; category: Category;
+  mass_g: string; certificate_id: number | null;
+}

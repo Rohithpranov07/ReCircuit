@@ -89,7 +89,7 @@ async def verify_all(db: Database, claims: Claims) -> tuple[int, list[dict[str, 
 
 @router.get("/reports/{name}")
 async def get_report(name: str, request: Request, format: Literal["json", "csv"] = "json",
-                     unit_id: int | None = None, root: int | None = None, as_of: datetime | None = None,
+                     unit_id: int | None = None, root: int | None = None, holder_org_id: int | None = None, as_of: datetime | None = None,
                      state: str | None = Query(default=None, max_length=20), category: str | None = None,
                      min_health: int | None = Query(default=None, ge=0, le=100), shortfall: bool = False,
                      limit: int = Query(1000, ge=1, le=50000),
@@ -114,8 +114,14 @@ async def get_report(name: str, request: Request, format: Literal["json", "csv"]
     elif name == "current-state":
         rows = await db.query(
             claims,
-            """SELECT * FROM v_unit_current WHERE (%(state)s::text IS NULL OR current_state = %(state)s)
-                ORDER BY unit_id LIMIT %(limit)s""", {"state": state, "limit": limit})
+            """SELECT c.*, u.serial_no, m.model_number, m.category, m.mass_g, cu.cert_id AS certificate_id
+                 FROM v_unit_current c
+                 JOIN unit u ON u.unit_id = c.unit_id
+                 JOIN part_model m ON m.model_id = u.model_id
+                 LEFT JOIN certificate_unit cu ON cu.unit_id = c.unit_id
+                WHERE (%(state)s::text IS NULL OR c.current_state = %(state)s)
+                  AND (%(holder)s::int IS NULL OR c.current_holder_org_id = %(holder)s)
+                ORDER BY c.unit_id LIMIT %(limit)s""", {"state": state, "holder": holder_org_id, "limit": limit})
     elif name == "reuse-inventory":
         rows = await db.query(
             claims,
