@@ -37,3 +37,22 @@ e2e:
 	$(PYTHON) -m seed --profile small --seed 42 | sed -n '/^profile/,/allocated/p'
 	docker compose up -d --build --wait api web
 	cd e2e && npm ci && npx playwright install chromium && npx playwright test
+
+.PHONY: demo venv
+# One command from a fresh clone: environment file, database, migrations, small demo world, API and web.
+demo:
+	@test -f .env || cp .env.example .env
+	docker compose up -d --build --wait
+	@echo
+	@echo "ReCircuit is running:  http://localhost:5173   (API http://localhost:8000/api/v1/health)"
+	@echo "Demo logins (fictional), password recircuit-demo:"
+	@echo "  admin@example.com  auditor@example.com  producer01@example.com  collector01@example.com"
+	@echo "  refurbisher01@example.com  recycler01@example.com"
+
+# Python environment for the seed generator, the API tests and the load scripts (Python 3.12).
+venv:
+	python3.12 -m venv api/.venv
+	api/.venv/bin/pip install -q "psycopg[binary,pool]==3.3.6" "faker==40.40.0" "bcrypt==4.0.1" \
+	  "fastapi==0.142.2" "uvicorn[standard]==0.54.0" "pydantic==2.13.5" "pyjwt==2.15.1" "passlib[bcrypt]==1.7.4" \
+	  "qrcode[pil]==8.2" "slowapi==0.1.10" "pytest==9.1.1" "pytest-asyncio==1.4.0" "httpx==0.28.1" \
+	  "testcontainers[postgres]==4.15.0" "ruff==0.16.10" "mypy==2.4.0" "types-passlib==1.7.7.20260211" types-qrcode
