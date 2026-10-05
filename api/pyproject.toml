@@ -3,7 +3,12 @@ name = "recircuit"
 version = "0.1.0"
 description = "ReCircuit API and seed generator"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "fastapi==0.142.2",
+  "uvicorn[standard]==0.54.0",
+  "pydantic==2.13.5",
+  "psycopg[binary,pool]==3.3.6",
+]
 
 [project.optional-dependencies]
 # dependencies of the seed generator (python -m seed); the API's own dependencies are added in T3.2
@@ -15,6 +20,10 @@ seed = [
 dev = [
   "ruff==0.16.10",
   "mypy==2.4.0",
+  "pytest==9.1.1",
+  "pytest-asyncio==1.4.0",
+  "httpx==0.28.1",
+  "testcontainers[postgres]==4.15.0",
 ]
 
 [tool.ruff]
@@ -24,3 +33,10 @@ target-version = "py312"
 [tool.mypy]
 strict = true
 ignore_missing_imports = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+pythonpath = ["."]

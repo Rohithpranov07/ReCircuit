@@ -16,7 +16,17 @@ services:
       timeout: 3s
       retries: 20
 
-  # api:  enabled in T3.2
+  api:
+    build: ./api
+    env_file: .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
   # web:  enabled in T4.1
 
 volumes:

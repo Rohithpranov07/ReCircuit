@@ -15,7 +15,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T2.1 Deterministic seed generator
 - [x] T2.2 Query evidence for Q1–Q8
 - [x] T3.1 Migration 013: roles, grants, RLS
-- [ ] T3.2 API skeleton: config, pipeline, error mapper
+- [x] T3.2 API skeleton: config, pipeline, error mapper
 - [ ] T3.3 Authentication
 - [ ] T3.4 Routers: catalogue, units, assembly, events, tests
 - [ ] T3.5 Routers: transfers, certificates, compliance
@@ -48,3 +48,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
   - rc_owner needs CREATEROLE (added to db/bootstrap/00_roles.sh; existing volumes: `ALTER ROLE rc_owner CREATEROLE`). Roles are cluster-wide, so 013 creates them only if missing and its down migration drops them only when nothing else depends on them.
   - Deviations from the TRD matrix, all deliberate: staff roles may also EXECUTE sp_verify_chain and fn_part_tree (the staff passport shows chain_verified); nobody can read actor.password_hash (column-level SELECT); mv_material_recovery has no RLS so only rc_auditor/rc_admin read it; RLS policies are scoped TO the staff roles. The route table lists COLLECTOR for harvest/reinstall but the TRD matrix (enforced here) allows only the technician: T3.4 must follow the matrix.
   - Staff views run as the caller, so v_unit_current's holder is computed from the manifests the caller may see (RLS); it can differ between organisations.
+- T3.2: API skeleton in api/app (config, allowlist, db pipeline, errors, health). Routines are called with named notation (`p_unit => %s::bigint`) so omitted arguments use the routine's default. The error mapper additionally maps FK violations (23503) and data exceptions (class 22) to INVALID_VALUE 400 instead of a 500, and request-validation errors to INVALID_VALUE 400. API tests run against a testcontainers PostgreSQL 16 built from the real migrations (needs Docker and dbmate on PATH).
