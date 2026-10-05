@@ -10,7 +10,7 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 - [x] T1.4 Migrations 006–008: diagnostics, custody, EPR (C7–C10)
 - [x] T1.5 Migration 009: assembly procedures from the TRD
 - [x] T1.6 Migration 010: routines defined by contract (E5)
-- [ ] T1.7 Migrations 011–012: views and indexes (E2)
+- [x] T1.7 Migrations 011–012: views and indexes (E2)
 - [ ] T1.8 pgTAP safety suite: C1–C10 and the walkthrough
 - [ ] T2.1 Deterministic seed generator
 - [ ] T2.2 Query evidence for Q1–Q8
