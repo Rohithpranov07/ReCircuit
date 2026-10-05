@@ -9,9 +9,11 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.allowlist import PUBLIC_DB_ROLE
+from app.auth import AuthState
 from app.config import Settings
 from app.db import Database
 from app.errors import ApiException
+from app.routers import auth as auth_router
 
 API_PREFIX = "/api/v1"
 
@@ -31,6 +33,8 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     app = FastAPI(title="ReCircuit API", version="1.0", lifespan=lifespan)
     app.state.settings = settings
     app.state.db = db
+    app.state.auth = AuthState(settings)
+    app.include_router(auth_router.router, prefix=API_PREFIX)
 
     @app.exception_handler(ApiException)
     async def api_exception_handler(_: Request, exc: ApiException) -> JSONResponse:
