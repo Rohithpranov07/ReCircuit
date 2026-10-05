@@ -1,0 +1,23 @@
+services:
+  db:
+    image: postgres:16
+    env_file: .env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - recircuit_pgdata:/var/lib/postgresql/data
+      - ./db/bootstrap:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d recircuit"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # api:  enabled in T3.2
+  # web:  enabled in T4.1
+
+volumes:
+  recircuit_pgdata:

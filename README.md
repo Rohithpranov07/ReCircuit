@@ -8,4 +8,15 @@ recycled unit to at most one EPR certificate.
 Specifications live in [`docs/`](docs): the PRD and the Technical Deep-Dive. Progress is tracked in
 [`docs/PROGRESS.md`](docs/PROGRESS.md) and pinned versions in [`docs/stack.lock.md`](docs/stack.lock.md).
 
-Setup instructions are added as the stack comes online.
+## Setup
+
+```bash
+cp .env.example .env          # then change the passwords
+docker compose up -d db       # PostgreSQL 16; first start creates database `recircuit`
+                              # and the login roles `rc_owner` (migrations) and `rc_app` (API)
+```
+
+The bootstrap script runs only on an empty data volume. To start over:
+`docker compose down -v && docker compose up -d db`.
+
+More setup steps are added as the stack comes online.

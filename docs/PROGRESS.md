@@ -3,7 +3,7 @@
 One line per task from the build playbook. Tick a task only after its VERIFY output has been shown and it is committed.
 
 - [x] T0.1 Repo scaffold, standing instructions and stack lock
-- [ ] T0.2 Docker Compose with PostgreSQL 16 and role bootstrap
+- [x] T0.2 Docker Compose with PostgreSQL 16 and role bootstrap
 - [ ] T1.1 Migrations 001–003: extensions, identity, catalogue
 - [ ] T1.2 Migration 004: unit and assembly graph (C1, C2)
 - [ ] T1.3 Migration 005: event ledger (C3–C6) and audit log
@@ -36,3 +36,4 @@ One line per task from the build playbook. Tick a task only after its VERIFY out
 ## Notes
 
 - Deferred / observations are recorded below, newest last.
+- T0.2: Docker daemon had to be started manually. rc_owner is created without CREATEROLE per spec; T3.1 (roles migration) needs it, to be handled there.
