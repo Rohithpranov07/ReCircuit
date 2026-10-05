@@ -56,3 +56,32 @@ export interface Session {
   org_id: number;
   role: Role;
 }
+
+// --- read models used by the passport screens (T4.2); they mirror the JSON the API returns ---------------
+export interface TreeRow {            // GET /units/{id}/tree
+  depth: number; unit_id: number; parent_unit_id: number;
+  serial_no: string; model_number: string; category: Category;
+}
+export interface TestLine {
+  test_type: string; result: TestResult; measured_value: number | null; health_score: number | null;
+}
+export interface UnitEvent {          // GET /units/{id}/events
+  event_id: number; event_type: EventType; occurred_at: string; recorded_at: string;
+  facility_id: number; facility_name: string; actor_id: number; actor_name: string;
+  event_hash: string; corrects_event_id: number | null; tests: TestLine[];
+}
+export interface TransferRow {        // GET /transfers
+  transfer_id: number; manifest_no: string; from_org_id: number; from_org: string;
+  to_org_id: number; to_org: string; shipped_at: string; received_at: string | null;
+  total_mass_kg: string | null;
+  items: { unit_id: number; declared_condition: Condition }[];
+  discrepancies: { unit_id: number; kind: 'MISSING' | 'EXTRA' }[];
+}
+export interface CertificateRow {     // GET /certificates
+  cert_id: number; cert_no: string; recycler_id: number; recycler: string;
+  producer_id: number | null; producer: string | null; category: string; financial_year: string;
+  claimed_kg: string; backed_kg: string; unit_count: number; issued_on: string;
+}
+export interface PassportRef {        // GET /reports/passport?unit_id=
+  unit_id: number; passport_uid: string;
+}

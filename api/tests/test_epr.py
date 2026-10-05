@@ -126,6 +126,9 @@ async def test_certificate_allocation_and_compliance(app: Any, http: httpx.Async
     certs = (await http.get("/api/v1/certificates", headers=prod)).json()
     assert [(c["cert_no"], float(c["backed_kg"])) for c in certs] == [("RC-API-1", 1.1)]
     assert (await http.get("/api/v1/certificates", headers=coll)).status_code == 403
+    backing = (await http.get("/api/v1/certificates", headers=prod, params={"unit_id": cast.recycled[0]})).json()
+    assert [c["cert_no"] for c in backing] == ["RC-API-1"]
+    assert (await http.get("/api/v1/certificates", headers=prod, params={"unit_id": cast.other[0]})).json() == []
 
 
 async def test_twenty_parallel_issuances_over_the_same_units_yield_one_certificate(

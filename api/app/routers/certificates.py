@@ -20,9 +20,10 @@ def _db(request: Request) -> Database:
 
 
 @router.get("/certificates")
-async def list_certificates(request: Request, claims: Claims = Depends(
+async def list_certificates(request: Request, unit_id: int | None = None, claims: Claims = Depends(
         require_roles("RECYCLER_OPERATOR", "PRODUCER", "AUDITOR"))) -> list[dict[str, Any]]:
-    """Certificates the caller may see (row-level security), with claimed vs backed kg."""
+    """Certificates the caller may see (row-level security), with claimed vs backed kg. With `unit_id`, only the
+    certificate that is backed by that unit."""
     return await _db(request).query(
         claims,
         """SELECT b.cert_id, b.cert_no, b.recycler_id, r.org_name AS recycler, b.producer_id,
@@ -32,7 +33,8 @@ async def list_certificates(request: Request, claims: Claims = Depends(
              JOIN epr_certificate c ON c.cert_id = b.cert_id
              JOIN organization r ON r.org_id = b.recycler_id
              LEFT JOIN organization p ON p.org_id = b.producer_id
-            ORDER BY c.issued_on DESC, b.cert_id DESC LIMIT 500""")
+            WHERE (%s::bigint IS NULL OR b.cert_id IN (SELECT cu.cert_id FROM certificate_unit cu WHERE cu.unit_id = %s))
+            ORDER BY c.issued_on DESC, b.cert_id DESC LIMIT 500""", [unit_id, unit_id])
 
 
 @router.post("/certificates", status_code=201)
